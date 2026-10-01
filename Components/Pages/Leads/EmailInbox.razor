@@ -1,0 +1,662 @@
+@page "/leads-center/email/inbox"
+@using AgenticSystem.Data
+@using AgenticSystem.Services
+@using MailKit.Net.Imap
+@using MailKit.Net.Pop3
+@using MailKit
+@using MailKit.Security
+@using MimeKit
+@inject FirebaseAuthService AuthService
+@inject FirebaseLeadsService LeadsService
+@inject LeadsCenterOrchestrator LeadsOrchestrator
+@inject FirebaseProfileService ProfileService
+@inject NavigationManager Navigation
+
+<PageTitle>Email Inbox - Agentic OS</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    .email-container {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090b16 60%, #02040a 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+        padding: 2.5rem;
+    }
+
+    .glass-panel {
+        background: rgba(30, 41, 59, 0.45);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(56, 189, 248, 0.15); /* Sky blue accent for email */
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        padding: 1.5rem;
+    }
+
+    .split-layout {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 1.5rem;
+        height: calc(100vh - 180px);
+        min-height: 500px;
+    }
+
+    @@media (max-width: 900px) {
+        .split-layout {
+            grid-template-columns: 1fr;
+            height: auto;
+        }
+    }
+
+    .email-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        overflow-y: auto;
+        padding-right: 0.25rem;
+    }
+
+    .email-card {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: left;
+    }
+
+    .email-card:hover {
+        border-color: rgba(56, 189, 248, 0.3);
+        background: rgba(15, 23, 42, 0.6);
+    }
+
+    .email-card.active {
+        border-color: #38bdf8;
+        background: rgba(56, 189, 248, 0.08);
+    }
+
+    .email-card.processed {
+        opacity: 0.75;
+        border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .email-detail {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        overflow-y: auto;
+    }
+
+    .custom-input {
+        width: 100%;
+        padding: 0.85rem 1.1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.6);
+        color: white;
+        font-size: 0.95rem;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-action {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+    }
+
+    .btn-action:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
+        background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+    }
+
+    .btn-action:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .mobile-only-btn {
+        display: none;
+    }
+
+    @@media (max-width: 768px) {
+        .mobile-only-btn {
+            display: inline-flex !important;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .split-layout.has-selected .email-list {
+            display: none !important;
+        }
+        .split-layout:not(.has-selected) .email-detail {
+            display: none !important;
+        }
+        .split-layout {
+            grid-template-columns: 1fr;
+            height: auto;
+            min-height: auto;
+        }
+        .email-container {
+            padding: 1.25rem;
+        }
+    }
+</style>
+
+<div class="email-container">
+    <!-- Header -->
+    <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 1.5rem; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="margin: 0; font-size: 2.3rem; font-weight: 800; background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">📥 Business Email Inbox</h1>
+            <p style="color: #94a3b8; margin: 0.25rem 0 0 0; font-size: 1rem;">Connects securely to your mail server to read actual client emails and process them as leads</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <button class="btn-action" style="background: linear-gradient(135deg, #0ea5e9 0%, #025a90 100%); border: none;" @onclick="SyncInbox" disabled="@(IsLoading || !IsEmailConfigured)">
+                @if (IsLoading)
+                {
+                    <span>🔄 Syncing...</span>
+                }
+                else
+                {
+                    <span>🔄 Refresh Inbox</span>
+                }
+            </button>
+            <button class="btn-action" style="background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); border: none; color: white; display: flex; align-items: center; gap: 0.5rem;" @onclick='() => Navigation.NavigateTo("/leads-center/email/config")'>
+                ⚙️ Configure Access
+            </button>
+            <button class="btn-action" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); color: #cbd5e1; box-shadow: none;" @onclick='() => Navigation.NavigateTo("/leads-center/email")'>
+                Back to Email Agent
+            </button>
+        </div>
+    </header>
+
+    @if (!IsEmailConfigured)
+    {
+        <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.08);">
+            <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+                <span style="font-size: 1.8rem;">⚠️</span>
+                <div>
+                    <strong style="color: #fca5a5; display: block; margin-bottom: 0.25rem; font-size: 1.1rem;">Email Server Configuration Required</strong>
+                    <p style="font-size: 0.95rem; color: #fecdd3; margin: 0 0 1rem 0;">You must configure your IMAP/POP3 server details to load the incoming business inbox emails.</p>
+                    <button class="btn-action" style="background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); border: none; color: white;" @onclick='() => Navigation.NavigateTo("/leads-center/email/config")'>
+                        Go to Email Configuration
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Connection Status Indicator Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.04); padding: 0.75rem 1.25rem; border-radius: 10px; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #94a3b8;">
+                <span>Server: <strong>@Config.IncomingServer</strong></span>
+                <span style="color: rgba(255,255,255,0.15);">|</span>
+                <span>User: <strong>@Config.Username</strong></span>
+                <span style="color: rgba(255,255,255,0.15);">|</span>
+                <span>Protocol: <strong>@Config.IncomingProtocol</strong></span>
+            </div>
+            <div>
+                @if (IsSimulated)
+                {
+                    <span class="badge-status" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);">
+                        ⚠️ Simulated (Connection Offline)
+                    </span>
+                }
+                else
+                {
+                    <span class="badge-status" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">
+                        🟢 Connected (@Config.IncomingProtocol)
+                    </span>
+                }
+            </div>
+        </div>
+
+        <div class="split-layout @(SelectedEmail != null ? "has-selected" : "")">
+            <!-- Left Pane: Inbox Email List -->
+            <div class="glass-panel email-list">
+                <h3 style="margin-top: 0; color: #f1f5f9; font-size: 1.1rem; font-weight: 700; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 0.5rem; display: flex; justify-content: space-between;">
+                    <span>Inbox Folder</span>
+                    <span style="color: #38bdf8; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;">@InboxEmails.Count messages</span>
+                </h3>
+
+                @if (IsLoading)
+                {
+                    <div style="text-align: center; color: #64748b; padding-top: 4rem; display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+                        <span class="spinner-border text-info" role="status" style="width: 1.5rem; height: 1.5rem;"></span>
+                        <span>Synchronizing with mail server...</span>
+                    </div>
+                }
+                else if (!InboxEmails.Any())
+                {
+                    <div style="text-align: center; color: #64748b; font-style: italic; padding-top: 4rem;">
+                        No messages found in Inbox.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var email in InboxEmails)
+                    {
+                        <div class="email-card @(SelectedEmail?.Id == email.Id ? "active" : "") @(email.IsProcessed ? "processed" : "")" @onclick="() => SelectEmail(email)">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                                <span style="font-weight: 700; color: #f1f5f9; font-size: 0.9rem;">
+                                    @(string.IsNullOrEmpty(email.FromName) ? email.FromAddress : email.FromName)
+                                </span>
+                                <span style="font-size: 0.7rem; color: #64748b;">@email.Date.ToLocalTime().ToString("t")</span>
+                            </div>
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #38bdf8; margin-bottom: 0.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @email.Subject
+                            </div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @email.Body
+                            </div>
+                            @if (email.IsProcessed)
+                            {
+                                <div style="margin-top: 0.5rem; display: flex; justify-content: flex-end;">
+                                    <span class="badge-status" style="background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.25); font-size: 0.6rem; padding: 0.15rem 0.4rem;">
+                                        🤖 Processed
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- Right Pane: Inbox Detailed View -->
+            <div class="glass-panel email-detail">
+                @if (SelectedEmail == null)
+                {
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #64748b;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📥</div>
+                        <p style="margin: 0; font-style: italic;">Select an email from the inbox list to read and process.</p>
+                    </div>
+                }
+                else
+                {
+                    <button class="btn-action" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); color: #cbd5e1; box-shadow: none; margin-bottom: 1rem;" @onclick="() => SelectedEmail = null">
+                        ← Back to Inbox List
+                    </button>
+
+                    <!-- Header Details -->
+                    <div style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 1rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.4rem; color: #f1f5f9;">@SelectedEmail.Subject</h2>
+                            <div style="font-size: 0.9rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.15rem;">
+                                <span>From: <strong>@(string.IsNullOrEmpty(SelectedEmail.FromName) ? SelectedEmail.FromAddress : $"{SelectedEmail.FromName} <{SelectedEmail.FromAddress}>")</strong></span>
+                                <span>To: @SelectedEmail.ToAddress</span>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem;">
+                                @SelectedEmail.Date.ToLocalTime().ToString("g")
+                            </div>
+                            @if (SelectedEmail.IsProcessed)
+                            {
+                                <span class="badge-status" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">
+                                    🤖 Ingested as Lead
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge-status" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
+                                    📬 Inbox Message
+                                </span>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Email Body -->
+                    <div style="flex-grow: 1;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Message Body</h4>
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 1.5rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.02); line-height: 1.6; color: #cbd5e1; white-space: pre-wrap; font-size: 0.95rem; min-height: 200px;">
+                            @SelectedEmail.Body
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem; justify-content: flex-end; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
+                        @if (SelectedEmail.IsProcessed)
+                        {
+                            <span style="color: #34d399; font-size: 0.85rem; font-weight: 600;">
+                                ✓ Email has already been imported to Leads Center
+                            </span>
+                        }
+                        else
+                        {
+                            <button class="btn-action" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);" @onclick="() => IngestAsLead(SelectedEmail)" disabled="@IsProcessing">
+                                @if (IsProcessing)
+                                {
+                                    <span>Processing Lead Agent...</span>
+                                }
+                                else
+                                {
+                                    <span>🤖 Process as Lead</span>
+                                }
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private EmailConfig Config { get; set; } = new();
+    private bool IsEmailConfigured { get; set; } = false;
+    private bool IsLoading { get; set; } = false;
+    private bool IsProcessing { get; set; } = false;
+    private bool IsSimulated { get; set; } = true;
+    private List<InboxEmail> InboxEmails { get; set; } = new();
+    private InboxEmail? SelectedEmail { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        var config = await LeadsService.GetEmailConfigAsync(userId);
+        IsEmailConfigured = config != null && 
+                            !string.IsNullOrEmpty(config.Username) && 
+                            !string.IsNullOrEmpty(config.IncomingServer) && 
+                            !string.IsNullOrEmpty(config.EncryptedPassword);
+
+        if (IsEmailConfigured)
+        {
+            Config = config!;
+            await SyncInbox();
+        }
+    }
+
+    private void SelectEmail(InboxEmail email)
+    {
+        SelectedEmail = email;
+    }
+
+    private async Task SyncInbox()
+    {
+        if (!IsEmailConfigured) return;
+
+        IsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Try to sync with mail server
+            if (Config.IncomingProtocol == "IMAP")
+            {
+                InboxEmails = await FetchImapEmailsAsync(Config);
+            }
+            else
+            {
+                InboxEmails = await FetchPop3EmailsAsync(Config);
+            }
+            IsSimulated = false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Connection to mail server failed, using local mock data. Details: {ex.Message}");
+            InboxEmails = GetMockEmails(Config.Username);
+            IsSimulated = true;
+        }
+        finally
+        {
+            IsLoading = false;
+            
+            // Auto-select first email if available
+            if (InboxEmails.Any())
+            {
+                SelectedEmail = InboxEmails.FirstOrDefault(m => SelectedEmail != null && m.Id == SelectedEmail.Id) ?? InboxEmails.First();
+            }
+            else
+            {
+                SelectedEmail = null;
+            }
+            
+            StateHasChanged();
+        }
+    }
+
+    private async Task<List<InboxEmail>> FetchImapEmailsAsync(EmailConfig config)
+    {
+        var emails = new List<InboxEmail>();
+        using (var client = new ImapClient())
+        {
+            client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+
+            var secureSocketOptions = SecureSocketOptions.Auto;
+            if (config.ImapPort == 993)
+            {
+                secureSocketOptions = SecureSocketOptions.SslOnConnect;
+            }
+            else if (config.ImapPort == 143)
+            {
+                secureSocketOptions = SecureSocketOptions.StartTlsWhenAvailable;
+            }
+
+            // Timeout after 8 seconds
+            client.Timeout = 8000;
+
+            await client.ConnectAsync(config.IncomingServer, config.ImapPort, secureSocketOptions);
+            
+            if (config.RequiresAuthentication)
+            {
+                await client.AuthenticateAsync(config.Username, config.EncryptedPassword);
+            }
+
+            var inbox = client.Inbox;
+            await inbox.OpenAsync(FolderAccess.ReadOnly);
+
+            int count = inbox.Count;
+            int start = Math.Max(0, count - 15);
+            for (int i = count - 1; i >= start; i--)
+            {
+                var message = await inbox.GetMessageAsync(i);
+                
+                var body = string.IsNullOrEmpty(message.TextBody) 
+                    ? message.HtmlBody ?? "" 
+                    : message.TextBody;
+                    
+                if (string.IsNullOrEmpty(message.TextBody) && !string.IsNullOrEmpty(message.HtmlBody))
+                {
+                    body = System.Text.RegularExpressions.Regex.Replace(body, "<.*?>", string.Empty);
+                }
+
+                emails.Add(new InboxEmail
+                {
+                    Id = message.MessageId ?? Guid.NewGuid().ToString(),
+                    Subject = message.Subject ?? "(No Subject)",
+                    FromName = message.From.Mailboxes.FirstOrDefault()?.Name ?? "",
+                    FromAddress = message.From.Mailboxes.FirstOrDefault()?.Address ?? "",
+                    ToAddress = message.To.Mailboxes.FirstOrDefault()?.Address ?? "",
+                    Body = body,
+                    Date = message.Date.DateTime
+                });
+            }
+
+            await client.DisconnectAsync(true);
+        }
+        return emails;
+    }
+
+    private async Task<List<InboxEmail>> FetchPop3EmailsAsync(EmailConfig config)
+    {
+        var emails = new List<InboxEmail>();
+        using (var client = new Pop3Client())
+        {
+            client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+            
+            var secureSocketOptions = SecureSocketOptions.Auto;
+            if (config.Pop3Port == 995)
+            {
+                secureSocketOptions = SecureSocketOptions.SslOnConnect;
+            }
+            else if (config.Pop3Port == 110)
+            {
+                secureSocketOptions = SecureSocketOptions.StartTlsWhenAvailable;
+            }
+
+            client.Timeout = 8000;
+
+            await client.ConnectAsync(config.IncomingServer, config.Pop3Port, secureSocketOptions);
+
+            if (config.RequiresAuthentication)
+            {
+                await client.AuthenticateAsync(config.Username, config.EncryptedPassword);
+            }
+
+            int count = client.Count;
+            int start = Math.Max(0, count - 15);
+            for (int i = count - 1; i >= start; i--)
+            {
+                var message = await client.GetMessageAsync(i);
+                var body = string.IsNullOrEmpty(message.TextBody) 
+                    ? message.HtmlBody ?? "" 
+                    : message.TextBody;
+
+                if (string.IsNullOrEmpty(message.TextBody) && !string.IsNullOrEmpty(message.HtmlBody))
+                {
+                    body = System.Text.RegularExpressions.Regex.Replace(body, "<.*?>", string.Empty);
+                }
+
+                emails.Add(new InboxEmail
+                {
+                    Id = message.MessageId ?? Guid.NewGuid().ToString(),
+                    Subject = message.Subject ?? "(No Subject)",
+                    FromName = message.From.Mailboxes.FirstOrDefault()?.Name ?? "",
+                    FromAddress = message.From.Mailboxes.FirstOrDefault()?.Address ?? "",
+                    ToAddress = message.To.Mailboxes.FirstOrDefault()?.Address ?? "",
+                    Body = body,
+                    Date = message.Date.DateTime
+                });
+            }
+
+            await client.DisconnectAsync(true);
+        }
+        return emails;
+    }
+
+    private async Task IngestAsLead(InboxEmail email)
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null || email == null) return;
+
+        IsProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            var profile = await ProfileService.GetProfileAsync(userId);
+            if (profile != null)
+            {
+                await LeadsOrchestrator.ProcessIncomingLeadAsync(
+                    userId,
+                    "Email",
+                    !string.IsNullOrEmpty(email.FromName) ? email.FromName : email.FromAddress,
+                    email.FromAddress,
+                    $"Subject: {email.Subject}\n\n{email.Body}",
+                    profile
+                );
+
+                email.IsProcessed = true;
+                
+                // Route to email agent queue showing the newly processed lead
+                Navigation.NavigateTo("/leads-center/email");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing email as lead: {ex.Message}");
+        }
+        finally
+        {
+            IsProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private List<InboxEmail> GetMockEmails(string configuredUsername)
+    {
+        return new List<InboxEmail>
+        {
+            new InboxEmail
+            {
+                Id = "mock-msg-1",
+                FromName = "Sarah Jenkins",
+                FromAddress = "sarah.j@techstartups.io",
+                ToAddress = configuredUsername,
+                Subject = "Inquiry: API volume limit custom pricing",
+                Body = "Hi there,\n\nI am Sarah from TechStartups. We are looking for an email agent and marketing orchestration platform. I read that you support custom volume API limits. Could you please send over your volume pricing tiers and guide us on how we can request a custom limit?\n\nOur team plans to ingest around 50k requests monthly to start with, scaling to 250k request/month by the end of Q3.\n\nThank you,\nSarah Jenkins\nTechStartups Inc.",
+                Date = DateTime.Now.AddMinutes(-12)
+            },
+            new InboxEmail
+            {
+                Id = "mock-msg-2",
+                FromName = "Daniel Craig",
+                FromAddress = "d.craig@mi6agency.gov",
+                ToAddress = configuredUsername,
+                Subject = "Request: Demo Slot Booking",
+                Body = "Hello,\n\nI would like to schedule a product walkthrough demo of your Leads Center next Tuesday morning (June 16) if possible. We have about 15 members in our acquisition team who would be using the product.\n\nLet me know what slots are available. Also, do you support custom integrations with CRM systems like Salesforce?\n\nBest regards,\nDaniel Craig\nAcquisition Lead",
+                Date = DateTime.Now.AddHours(-2)
+            },
+            new InboxEmail
+            {
+                Id = "mock-msg-3",
+                FromName = "Amanda Miller",
+                FromAddress = "amanda.miller@retailgrowth.com",
+                ToAddress = configuredUsername,
+                Subject = "Partnership Proposal for Q3",
+                Body = "Dear Team,\n\nI represent RetailGrowth, a marketing consulting firm specialized in ecommerce growth strategy. We've been looking at your tools and see potential for a strong reseller partnership or affiliate referral program.\n\nCould we jump on a brief 10-minute call this Thursday to discuss how we could refer clients to your Agentic System platform?\n\nThanks,\nAmanda Miller\nVP Partnerships",
+                Date = DateTime.Now.AddHours(-5)
+            },
+            new InboxEmail
+            {
+                Id = "mock-msg-4",
+                FromName = "John Davis",
+                FromAddress = "john.davis@logisticspro.com",
+                ToAddress = configuredUsername,
+                Subject = "Logistics integration query",
+                Body = "Hello,\n\nDo you currently have an agent template that works for automated inventory lookup and tracking in logistics? We receive a lot of inbound emails from customers asking 'Where is my order?' and would love to automate the drafting of responses using our custom SQL database.\n\nLet me know if this falls within your platform's capabilities.\n\nRegards,\nJohn Davis\nOperations Manager, LogisticsPro",
+                Date = DateTime.Now.AddDays(-1)
+            }
+        };
+    }
+
+    public class InboxEmail
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Subject { get; set; } = string.Empty;
+        public string FromName { get; set; } = string.Empty;
+        public string FromAddress { get; set; } = string.Empty;
+        public string ToAddress { get; set; } = string.Empty;
+        public string Body { get; set; } = string.Empty;
+        public DateTime Date { get; set; }
+        public bool IsProcessed { get; set; } = false;
+    }
+}

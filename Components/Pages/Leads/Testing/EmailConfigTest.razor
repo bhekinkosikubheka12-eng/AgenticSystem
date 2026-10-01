@@ -1,0 +1,852 @@
+@page "/leads-center/email/config/test"
+@using AgenticSystem.Data
+@using AgenticSystem.Services
+@using MailKit.Security
+@using MimeKit
+@inject FirebaseAuthService AuthService
+@inject FirebaseLeadsService LeadsService
+@inject NavigationManager Navigation
+
+<PageTitle>Test Email Server Connection - Agentic OS</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    .test-container {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090b16 60%, #02040a 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+        padding: 2.5rem;
+    }
+
+    .glass-panel {
+        background: rgba(30, 41, 59, 0.45);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(56, 189, 248, 0.15); /* Sky blue accent for email */
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        padding: 2.5rem;
+    }
+
+    .split-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-top: 1.5rem;
+    }
+
+    @@media (max-width: 1024px) {
+        .split-layout {
+            grid-template-columns: 1fr;
+        }
+        .test-container {
+            padding: 1.25rem;
+        }
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+    }
+
+    .custom-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.85rem 1.1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.6);
+        color: white;
+        font-size: 0.95rem;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+
+    .custom-input:focus {
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+    }
+
+    .btn-action {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        border: none;
+        color: white;
+        padding: 0.85rem 1.75rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-action:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
+        background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+    }
+
+    .btn-action:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #cbd5e1;
+        padding: 0.85rem 1.75rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .log-box {
+        font-family: 'JetBrains Mono', monospace;
+        background: #020617;
+        border: 1px solid rgba(56, 189, 248, 0.15);
+        padding: 1rem;
+        border-radius: 8px;
+        color: #cbd5e1;
+        font-size: 0.82rem;
+        line-height: 1.5;
+        height: 180px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        margin-top: 1rem;
+        box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+
+    .config-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+
+    .config-table th, .config-table td {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .config-table th {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        width: 35%;
+    }
+
+    .config-table td {
+        font-size: 0.9rem;
+        color: #f1f5f9;
+    }
+
+    .config-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.6rem;
+        border-radius: 9999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .badge-success {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-error {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .badge-info {
+        background: rgba(56, 189, 248, 0.15);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .email-item {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .email-item:last-child {
+        margin-bottom: 0;
+    }
+
+    /* Toggle Switch */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 22px;
+    }
+
+    .switch input { 
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #475569;
+        transition: .4s;
+        border-radius: 22px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: #38bdf8;
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(22px);
+    }
+</style>
+
+<div class="test-container">
+    <!-- Header -->
+    <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 1.5rem; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="margin: 0; font-size: 2.3rem; font-weight: 800; background: linear-gradient(135deg, #a855f7 0%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🧪 Connection Diagnostics</h1>
+            <p style="color: #94a3b8; margin: 0.25rem 0 0 0; font-size: 1rem;">Verify secure network Handshakes and end-to-end messaging channels</p>
+        </div>
+        <button class="btn-secondary" style="padding: 0.6rem 1.25rem; font-size: 0.9rem;" @onclick='() => Navigation.NavigateTo("/leads-center/email/config")'>
+            Back to Configuration
+        </button>
+    </header>
+
+    <div class="split-layout">
+        <!-- Left Column: Configurations -->
+        <div class="glass-panel" style="display: flex; flex-direction: column; gap: 1.5rem; height: fit-content;">
+            <div style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #f1f5f9; font-weight: 700;">Email Server Configurations</h3>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 0.78rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Simulation Mode</span>
+                    <label class="switch">
+                        <input type="checkbox" @bind="IsSimulation" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            @if (IsLoadingConfig)
+            {
+                <div style="text-align: center; color: #64748b; padding: 2rem;">Loading configuration settings...</div>
+            }
+            else if (!IsEmailConfigured && !IsSimulation)
+            {
+                <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #f87171; padding: 1rem; border-radius: 10px; font-size: 0.9rem;">
+                    ⚠️ No email configurations detected. Please save configuration settings first, or enable <strong>Simulation Mode</strong> to evaluate.
+                </div>
+            }
+            else
+            {
+                <table class="config-table">
+                    <tbody>
+                        <tr>
+                            <th>Username / Email</th>
+                            <td><code>@Config.Username</code></td>
+                        </tr>
+                        <tr>
+                            <th>Password</th>
+                            <td>
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                                    <code>@(ShowPassword ? DecryptedPassword : new string('•', Math.Max(8, DecryptedPassword.Length)))</code>
+                                    <button class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 600;" @onclick="TogglePasswordShow">
+                                        @(ShowPassword ? "Hide" : "Show")
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Incoming Protocol</th>
+                            <td><span class="badge-status badge-info">@Config.IncomingProtocol</span></td>
+                        </tr>
+                        <tr>
+                            <th>Incoming Server</th>
+                            <td><code>@Config.IncomingServer</code></td>
+                        </tr>
+                        <tr>
+                            <th>Incoming Port</th>
+                            <td><code>@(Config.IncomingProtocol == "IMAP" ? Config.ImapPort : Config.Pop3Port)</code></td>
+                        </tr>
+                        <tr>
+                            <th>Outgoing Server (SMTP)</th>
+                            <td><code>@Config.OutgoingServer</code></td>
+                        </tr>
+                        <tr>
+                            <th>SMTP Port</th>
+                            <td><code>@Config.SmtpPort</code></td>
+                        </tr>
+                        <tr>
+                            <th>Requires Auth</th>
+                            <td>
+                                <span class="badge-status @(Config.RequiresAuthentication ? "badge-success" : "badge-info")">
+                                    @(Config.RequiresAuthentication ? "Yes" : "No")
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            }
+        </div>
+
+        <!-- Right Column: Interactive Diagnostic Tests -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            
+            <!-- Inbox Test Card -->
+            <div class="glass-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 1rem; margin-bottom: 1rem;">
+                    <h3 style="margin: 0; color: #f1f5f9; font-weight: 700;">Test 1: Load Incoming Inbox</h3>
+                    <div>
+                        @if (InboxTestPassed == true)
+                        {
+                            <span class="badge-status badge-success">Passed</span>
+                        }
+                        else if (InboxTestPassed == false)
+                        {
+                            <span class="badge-status badge-error">Failed</span>
+                        }
+                        else
+                        {
+                            <span class="badge-status badge-info" style="background: rgba(255,255,255,0.05); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1);">Untested</span>
+                        }
+                    </div>
+                </div>
+                
+                <p style="font-size: 0.88rem; color: #94a3b8; margin: 0 0 1rem 0;">
+                    Verifies connection to <strong>@Config.IncomingServer</strong> using <strong>@Config.IncomingProtocol</strong> protocol, runs authentication, opens the inbox folder, and loads the latest email headers.
+                </p>
+
+                <button class="btn-action" style="width: 100%;" @onclick="RunInboxTest" disabled="@(IsTestingInbox || IsTestingSmtp || (!IsEmailConfigured && !IsSimulation))">
+                    @if (IsTestingInbox)
+                    {
+                        <span>🔄 Running Diagnostics...</span>
+                    }
+                    else
+                    {
+                        <span>⚡ Run Inbox Load Test</span>
+                    }
+                </button>
+
+                @if (!string.IsNullOrEmpty(InboxLogs))
+                {
+                    <div class="log-box">@InboxLogs</div>
+                }
+
+                @if (TestEmails.Any())
+                {
+                    <div style="margin-top: 1rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1; font-weight: 700;">Retrieved Messages Preview</h4>
+                        <div style="max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                            @foreach (var email in TestEmails)
+                            {
+                                <div class="email-item">
+                                    <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.85rem; color: #f8fafc;">
+                                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 65%;">@email.From</span>
+                                        <span style="font-size: 0.72rem; color: #64748b;">@email.Date.ToString("g")</span>
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #38bdf8; margin-top: 0.2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        @email.Subject
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- SMTP Test Card -->
+            <div class="glass-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 1rem; margin-bottom: 1rem;">
+                    <h3 style="margin: 0; color: #f1f5f9; font-weight: 700;">Test 2: Send Outgoing Messages</h3>
+                    <div>
+                        @if (SmtpTestPassed == true)
+                        {
+                            <span class="badge-status badge-success">Passed</span>
+                        }
+                        else if (SmtpTestPassed == false)
+                        {
+                            <span class="badge-status badge-error">Failed</span>
+                        }
+                        else
+                        {
+                            <span class="badge-status badge-info" style="background: rgba(255,255,255,0.05); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1);">Untested</span>
+                        }
+                    </div>
+                </div>
+
+                <p style="font-size: 0.88rem; color: #94a3b8; margin: 0 0 1rem 0;">
+                    Tests SMTP transport channels, connects to <strong>@Config.OutgoingServer</strong>, completes authentication, and dispatches a test message.
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label" for="recipient">Recipient Email Address</label>
+                    <input id="recipient" type="email" class="custom-input" placeholder="recipient@example.com" @bind="SmtpRecipient" disabled="@(IsTestingSmtp || IsTestingInbox || (!IsEmailConfigured && !IsSimulation))" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="subject">Email Subject</label>
+                    <input id="subject" type="text" class="custom-input" @bind="SmtpSubject" disabled="@(IsTestingSmtp || IsTestingInbox || (!IsEmailConfigured && !IsSimulation))" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="body">Email Message Body</label>
+                    <textarea id="body" class="custom-input" style="height: 80px; resize: vertical;" @bind="SmtpBody" disabled="@(IsTestingSmtp || IsTestingInbox || (!IsEmailConfigured && !IsSimulation))"></textarea>
+                </div>
+
+                <button class="btn-action" style="width: 100%; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);" @onclick="RunSmtpTest" disabled="@(IsTestingInbox || IsTestingSmtp || (!IsEmailConfigured && !IsSimulation))">
+                    @if (IsTestingSmtp)
+                    {
+                        <span>🔄 Dispatching Mail Packet...</span>
+                    }
+                    else
+                    {
+                        <span>🚀 Send Test Email</span>
+                    }
+                </button>
+
+                @if (!string.IsNullOrEmpty(SmtpLogs))
+                {
+                    <div class="log-box">@SmtpLogs</div>
+                }
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    private EmailConfig Config { get; set; } = new();
+    private string DecryptedPassword { get; set; } = string.Empty;
+    private bool IsLoadingConfig { get; set; } = true;
+    private bool IsEmailConfigured { get; set; } = false;
+    private bool ShowPassword { get; set; } = false;
+    private bool IsSimulation { get; set; } = false;
+
+    // Inbox diagnostics state
+    private string InboxLogs { get; set; } = string.Empty;
+    private bool IsTestingInbox { get; set; } = false;
+    private List<TestEmailHeader> TestEmails { get; set; } = new();
+    private bool? InboxTestPassed { get; set; }
+
+    // SMTP diagnostics state
+    private string SmtpLogs { get; set; } = string.Empty;
+    private bool IsTestingSmtp { get; set; } = false;
+    private bool? SmtpTestPassed { get; set; }
+    
+    // SMTP Inputs
+    private string SmtpRecipient { get; set; } = string.Empty;
+    private string SmtpSubject { get; set; } = "Agentic OS - SMTP Configuration Test Message";
+    private string SmtpBody { get; set; } = $"This is an automated SMTP connection test sent from Agentic OS.\n\nTimestamp: {DateTime.Now:F}\nConfiguration Server: SMTP Server\nStatus: Active";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        var config = await LeadsService.GetEmailConfigAsync(userId);
+        if (config != null && !string.IsNullOrEmpty(config.Username) && !string.IsNullOrEmpty(config.IncomingServer))
+        {
+            Config = config;
+            DecryptedPassword = config.EncryptedPassword;
+            IsEmailConfigured = true;
+            SmtpRecipient = config.Username; // Prefill with the user's username
+        }
+        else
+        {
+            Config = new EmailConfig { UserId = userId };
+            IsEmailConfigured = false;
+            IsSimulation = true; // Auto-enable simulation if configuration is blank
+        }
+        IsLoadingConfig = false;
+    }
+
+    private void TogglePasswordShow()
+    {
+        ShowPassword = !ShowPassword;
+    }
+
+    private void LogInbox(string message)
+    {
+        InboxLogs += $"[{DateTime.Now:HH:mm:ss}] {message}\n";
+        StateHasChanged();
+    }
+
+    private void LogSmtp(string message)
+    {
+        SmtpLogs += $"[{DateTime.Now:HH:mm:ss}] {message}\n";
+        StateHasChanged();
+    }
+
+    private async Task RunInboxTest()
+    {
+        InboxLogs = string.Empty;
+        InboxTestPassed = null;
+        TestEmails.Clear();
+        IsTestingInbox = true;
+        LogInbox("Initializing connection diagnostics...");
+
+        if (IsSimulation)
+        {
+            await SimulateInboxTest();
+            IsTestingInbox = false;
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            if (Config.IncomingProtocol == "IMAP")
+            {
+                await RunImapTestAsync();
+            }
+            else
+            {
+                await RunPop3TestAsync();
+            }
+            InboxTestPassed = true;
+        }
+        catch (Exception ex)
+        {
+            LogInbox($"❌ ERROR: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                LogInbox($"❌ INNER ERROR: {ex.InnerException.Message}");
+            }
+            InboxTestPassed = false;
+        }
+        finally
+        {
+            IsTestingInbox = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RunImapTestAsync()
+    {
+        LogInbox($"Connecting to IMAP Server: {Config.IncomingServer} on Port {Config.ImapPort}...");
+        using (var client = new MailKit.Net.Imap.ImapClient())
+        {
+            client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+            
+            var socketOptions = SecureSocketOptions.Auto;
+            if (Config.ImapPort == 993) socketOptions = SecureSocketOptions.SslOnConnect;
+            else if (Config.ImapPort == 143) socketOptions = SecureSocketOptions.StartTlsWhenAvailable;
+
+            client.Timeout = 10000; // 10s timeout
+            await client.ConnectAsync(Config.IncomingServer, Config.ImapPort, socketOptions);
+            LogInbox("🟢 Connected to server successfully.");
+
+            if (Config.RequiresAuthentication)
+            {
+                LogInbox($"Authenticating as user '{Config.Username}'...");
+                await client.AuthenticateAsync(Config.Username, DecryptedPassword);
+                LogInbox("🟢 Authentication successful.");
+            }
+            else
+            {
+                LogInbox("Skipping authentication as per configuration settings.");
+            }
+
+            LogInbox("Opening INBOX folder in Read-Only mode...");
+            var inbox = client.Inbox;
+            await inbox.OpenAsync(MailKit.FolderAccess.ReadOnly);
+            LogInbox($"🟢 INBOX folder opened. Total message count: {inbox.Count}");
+
+            int count = inbox.Count;
+            int limit = Math.Max(0, count - 5);
+            LogInbox("Retrieving headers for the latest messages...");
+
+            for (int i = count - 1; i >= limit; i--)
+            {
+                var message = await inbox.GetMessageAsync(i);
+                TestEmails.Add(new TestEmailHeader
+                {
+                    Subject = message.Subject ?? "(No Subject)",
+                    From = message.From.ToString(),
+                    Date = message.Date.DateTime
+                });
+                LogInbox($" - Retrieved message #{i + 1}: \"{message.Subject}\" from {message.From}");
+            }
+
+            LogInbox("Disconnecting IMAP channel...");
+            await client.DisconnectAsync(true);
+            LogInbox("🟢 Disconnected successfully. Load Inbox test passed.");
+        }
+    }
+
+    private async Task RunPop3TestAsync()
+    {
+        LogInbox($"Connecting to POP3 Server: {Config.IncomingServer} on Port {Config.Pop3Port}...");
+        using (var client = new MailKit.Net.Pop3.Pop3Client())
+        {
+            client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+            
+            var socketOptions = SecureSocketOptions.Auto;
+            if (Config.Pop3Port == 995) socketOptions = SecureSocketOptions.SslOnConnect;
+            else if (Config.Pop3Port == 110) socketOptions = SecureSocketOptions.StartTlsWhenAvailable;
+
+            client.Timeout = 10000; // 10s timeout
+            await client.ConnectAsync(Config.IncomingServer, Config.Pop3Port, socketOptions);
+            LogInbox("🟢 Connected to server successfully.");
+
+            if (Config.RequiresAuthentication)
+            {
+                LogInbox($"Authenticating as user '{Config.Username}'...");
+                await client.AuthenticateAsync(Config.Username, DecryptedPassword);
+                LogInbox("🟢 Authentication successful.");
+            }
+            else
+            {
+                LogInbox("Skipping authentication as per configuration settings.");
+            }
+
+            int count = client.Count;
+            LogInbox($"🟢 POP3 connection active. Total messages available: {count}");
+
+            int limit = Math.Max(0, count - 5);
+            LogInbox("Retrieving headers for the latest messages...");
+
+            for (int i = count - 1; i >= limit; i--)
+            {
+                var message = await client.GetMessageAsync(i);
+                TestEmails.Add(new TestEmailHeader
+                {
+                    Subject = message.Subject ?? "(No Subject)",
+                    From = message.From.ToString(),
+                    Date = message.Date.DateTime
+                });
+                LogInbox($" - Retrieved message #{i + 1}: \"{message.Subject}\" from {message.From}");
+            }
+
+            LogInbox("Disconnecting POP3 channel...");
+            await client.DisconnectAsync(true);
+            LogInbox("🟢 Disconnected successfully. Load Inbox test passed.");
+        }
+    }
+
+    private async Task RunSmtpTest()
+    {
+        if (string.IsNullOrWhiteSpace(SmtpRecipient))
+        {
+            SmtpLogs = "❌ ERROR: Recipient address cannot be empty.\n";
+            SmtpTestPassed = false;
+            return;
+        }
+
+        SmtpLogs = string.Empty;
+        SmtpTestPassed = null;
+        IsTestingSmtp = true;
+        LogSmtp("Initializing SMTP transmission checks...");
+
+        if (IsSimulation)
+        {
+            await SimulateSmtpTest();
+            IsTestingSmtp = false;
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            LogSmtp($"Preparing MimeMessage structure...");
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress("Agentic OS Test", Config.Username));
+            message.To.Add(new MailboxAddress("", SmtpRecipient));
+            message.Subject = SmtpSubject;
+            message.Body = new TextPart("plain") { Text = SmtpBody };
+
+            LogSmtp($"Connecting to SMTP Server: {Config.OutgoingServer} on Port {Config.SmtpPort}...");
+            using (var client = new MailKit.Net.Smtp.SmtpClient())
+            {
+                client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+
+                var socketOptions = SecureSocketOptions.Auto;
+                if (Config.SmtpPort == 465) socketOptions = SecureSocketOptions.SslOnConnect;
+                else if (Config.SmtpPort == 587) socketOptions = SecureSocketOptions.StartTls;
+
+                client.Timeout = 10000; // 10s timeout
+                await client.ConnectAsync(Config.OutgoingServer, Config.SmtpPort, socketOptions);
+                LogSmtp("🟢 Connected to SMTP server successfully.");
+
+                if (Config.RequiresAuthentication)
+                {
+                    LogSmtp($"Authenticating as user '{Config.Username}'...");
+                    await client.AuthenticateAsync(Config.Username, DecryptedPassword);
+                    LogSmtp("🟢 Authentication successful.");
+                }
+                else
+                {
+                    LogSmtp("Skipping authentication as per configuration settings.");
+                }
+
+                LogSmtp($"Transmitting test message to <{SmtpRecipient}>...");
+                await client.SendAsync(message);
+                LogSmtp("🟢 Message transmitted successfully.");
+
+                LogSmtp("Disconnecting SMTP channel...");
+                await client.DisconnectAsync(true);
+                LogSmtp("🟢 Disconnected successfully. SMTP Send test passed.");
+            }
+            SmtpTestPassed = true;
+        }
+        catch (Exception ex)
+        {
+            LogSmtp($"❌ ERROR: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                LogSmtp($"❌ INNER ERROR: {ex.InnerException.Message}");
+            }
+            SmtpTestPassed = false;
+        }
+        finally
+        {
+            IsTestingSmtp = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SimulateInboxTest()
+    {
+        LogInbox("Connecting to incoming mail server (SIMULATED)...");
+        await Task.Delay(1200);
+        LogInbox($"🟢 Connected to simulated server: {Config.IncomingServer}");
+        await Task.Delay(800);
+        
+        if (Config.RequiresAuthentication)
+        {
+            LogInbox($"Authenticating credentials for '{Config.Username}' (SIMULATED)...");
+            await Task.Delay(1000);
+            LogInbox("🟢 Authentication verified successfully.");
+        }
+
+        LogInbox($"Opening simulated inbox using protocol '{Config.IncomingProtocol}'...");
+        await Task.Delay(800);
+        LogInbox("🟢 Inbox synchronised. Count: 3 messages.");
+        
+        TestEmails.Add(new TestEmailHeader
+        {
+            Subject = "Simulated Lead Inquiry - Integration options",
+            From = "client@simulatedcorp.com",
+            Date = DateTime.Now.AddMinutes(-15)
+        });
+        LogInbox(" - Retrieved message #1: \"Simulated Lead Inquiry - Integration options\" from client@simulatedcorp.com");
+        await Task.Delay(300);
+        
+        TestEmails.Add(new TestEmailHeader
+        {
+            Subject = "Volume limits questions",
+            From = "tester@devsolutions.io",
+            Date = DateTime.Now.AddHours(-1)
+        });
+        LogInbox(" - Retrieved message #2: \"Volume limits questions\" from tester@devsolutions.io");
+        await Task.Delay(300);
+
+        TestEmails.Add(new TestEmailHeader
+        {
+            Subject = "System Health Diagnostics check",
+            From = "no-reply@agenticos.net",
+            Date = DateTime.Now.AddDays(-1)
+        });
+        LogInbox(" - Retrieved message #3: \"System Health Diagnostics check\" from no-reply@agenticos.net");
+        await Task.Delay(300);
+
+        LogInbox("Disconnecting (SIMULATED)...");
+        await Task.Delay(500);
+        LogInbox("🟢 Disconnected successfully. Simulated inbox test complete.");
+        InboxTestPassed = true;
+    }
+
+    private async Task SimulateSmtpTest()
+    {
+        LogSmtp("Constructing simulated payload structure...");
+        await Task.Delay(800);
+        LogSmtp($"Connecting to Outgoing Server: {Config.OutgoingServer} on Port {Config.SmtpPort} (SIMULATED)...");
+        await Task.Delay(1200);
+        LogSmtp("🟢 Connection established.");
+        await Task.Delay(600);
+
+        if (Config.RequiresAuthentication)
+        {
+            LogSmtp($"Authenticating as user '{Config.Username}' (SIMULATED)...");
+            await Task.Delay(1000);
+            LogSmtp("🟢 Authentication successful.");
+        }
+
+        LogSmtp($"Transmitting packet payload containing subject \"{SmtpSubject}\" to recipient <{SmtpRecipient}>...");
+        await Task.Delay(1500);
+        LogSmtp("🟢 Simulated packet payload accepted by server queue.");
+        await Task.Delay(500);
+        
+        LogSmtp("Closing SMTP channel connection...");
+        await Task.Delay(500);
+        LogSmtp("🟢 Connection terminated. Simulated SMTP test complete.");
+        SmtpTestPassed = true;
+    }
+
+    public class TestEmailHeader
+    {
+        public string Subject { get; set; } = string.Empty;
+        public string From { get; set; } = string.Empty;
+        public DateTime Date { get; set; }
+    }
+}

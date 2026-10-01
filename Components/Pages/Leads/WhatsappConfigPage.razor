@@ -1,0 +1,476 @@
+@page "/leads-center/whatsapp/config"
+@using AgenticSystem.Data
+@using AgenticSystem.Services
+@inject FirebaseAuthService AuthService
+@inject WhatsappService WhatsappService
+@inject NavigationManager Navigation
+
+<PageTitle>WhatsApp Agent Configuration - Agentic OS</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    .config-container {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #064e3b 0%, #080d16 60%, #010408 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+        padding: 2.5rem;
+    }
+
+    .glass-panel {
+        background: rgba(30, 41, 59, 0.45);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(16, 185, 129, 0.15); /* Emerald WhatsApp theme border */
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        padding: 2.5rem;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    @@media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        .config-container {
+            padding: 1.25rem;
+        }
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .form-label {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+    }
+
+    .custom-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.85rem 1.1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.6);
+        color: white;
+        font-size: 0.95rem;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+
+    .custom-input:focus {
+        border-color: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+    }
+
+    .custom-input:disabled {
+        background: rgba(15, 23, 42, 0.25);
+        color: #94a3b8;
+        border-color: rgba(255, 255, 255, 0.05);
+        cursor: not-allowed;
+    }
+
+    .custom-input::placeholder {
+        color: #475569;
+    }
+
+    .password-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .password-toggle-btn {
+        position: absolute;
+        right: 1rem;
+        background: none;
+        border: none;
+        color: #64748b;
+        cursor: pointer;
+        padding: 0;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: color 0.2s ease;
+    }
+
+    .password-toggle-btn:hover {
+        color: #10b981;
+    }
+
+    .btn-action {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        border: none;
+        color: white;
+        padding: 0.85rem 1.75rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    }
+
+    .btn-action:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    }
+
+    .btn-action:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #cbd5e1;
+        padding: 0.85rem 1.75rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .alert-success {
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        color: #34d399;
+        padding: 1rem;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-card {
+        background: rgba(16, 185, 129, 0.05);
+        border: 1px solid rgba(16, 185, 129, 0.15);
+        border-radius: 12px;
+        padding: 1.25rem;
+        color: #94a3b8;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        margin-bottom: 2rem;
+    }
+
+    .btn-pill-fill {
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        color: #34d399;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0.5rem;
+        align-self: flex-start;
+    }
+
+    .btn-pill-fill:hover {
+        background: rgba(16, 185, 129, 0.2);
+        color: #f8fafc;
+        border-color: #34d399;
+    }
+
+    .copy-btn {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #cbd5e1;
+        padding: 0.2rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .copy-btn:hover {
+        background: #10b981;
+        color: white;
+    }
+</style>
+
+<div class="config-container">
+    <!-- Header -->
+    <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 1.5rem; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="margin: 0; font-size: 2.3rem; font-weight: 800; background: linear-gradient(135deg, #10b981 0%, #34d399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">⚙️ WhatsApp API Configuration</h1>
+            <p style="color: #94a3b8; margin: 0.25rem 0 0 0; font-size: 1rem;">Connect your WhatsApp Business Cloud API account to receive and send messages in real-time</p>
+        </div>
+        <button class="btn-secondary" style="padding: 0.6rem 1.25rem; font-size: 0.9rem;" @onclick='() => Navigation.NavigateTo("/leads-center/whatsapp")'>
+            Back to WhatsApp Agent
+        </button>
+    </header>
+
+    <div style="max-width: 800px; margin: 0 auto;">
+        <!-- Secure Storage Banner -->
+        <div class="info-card" style="display: flex; gap: 1rem; align-items: flex-start;">
+            <div style="font-size: 1.5rem;">🔒</div>
+            <div>
+                <strong style="color: #f1f5f9; display: block; margin-bottom: 0.25rem;">Secure Security Vault</strong>
+                Your Access Token is encrypted using server-side AES-256 before being synchronized. 
+                Credentials remain completely secure and are only decrypted in-memory on the backend application server when authenticating requests to Meta Graph API.
+            </div>
+        </div>
+
+        @if (ShowSuccessAlert)
+        {
+            <div class="alert-success">
+                <span>✅</span>
+                <span>WhatsApp API configurations saved and synchronized securely.</span>
+            </div>
+        }
+
+        <!-- Configuration Form -->
+        <div class="glass-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                <h3 style="margin: 0; color: #f1f5f9; font-weight: 700;">
+                    @(IsReadOnly ? "WhatsApp Credentials (Locked)" : "WhatsApp Credentials (Editing)")
+                </h3>
+                @if (!IsReadOnly)
+                {
+                    <button class="btn-pill-fill" @onclick="AutoFillExample" style="margin: 0;">
+                        💡 Load Example Credentials
+                    </button>
+                }
+            </div>
+
+            <div class="form-grid">
+                <!-- Phone Number ID -->
+                <div class="form-group">
+                    <label class="form-label" for="phoneId">Phone Number ID</label>
+                    <input id="phoneId" type="text" class="custom-input" placeholder="e.g. 10459382104928" @bind="Config.PhoneNumberId" disabled="@IsReadOnly" />
+                </div>
+
+                <!-- WABA ID -->
+                <div class="form-group">
+                    <label class="form-label" for="wabaId">WhatsApp Business Account ID (WABA ID)</label>
+                    <input id="wabaId" type="text" class="custom-input" placeholder="e.g. 20984128503810" @bind="Config.WabaId" disabled="@IsReadOnly" />
+                </div>
+
+                <!-- Access Token (Full Width) -->
+                <div class="form-group full-width">
+                    <label class="form-label" for="token">Permanent Access Token (Bearer Token)</label>
+                    <div class="password-container">
+                        <input id="token" type="@(ShowToken ? "text" : "password")" class="custom-input" placeholder="@TokenPlaceholder" @bind="Config.AccessToken" disabled="@IsReadOnly" />
+                        @if (!IsReadOnly)
+                        {
+                            <button type="button" class="password-toggle-btn" @onclick="ToggleTokenVisibility">
+                                @(ShowToken ? "Hide" : "Show")
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Webhook Configuration Header -->
+                <div class="form-group full-width" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+                    <h4 style="margin: 0; color: #f1f5f9; font-weight: 700;">Webhook Settings (Meta Developer Console)</h4>
+                    <p style="color: #64748b; font-size: 0.8rem; margin: 0.25rem 0 0 0;">Enter a verification token and use the generated callback URL on your Meta app dashboard.</p>
+                </div>
+
+                <!-- Webhook Verify Token -->
+                <div class="form-group">
+                    <label class="form-label" for="verifyToken">Webhook Verify Token</label>
+                    <input id="verifyToken" type="text" class="custom-input" placeholder="Enter custom verification secret" @bind="Config.VerifyToken" disabled="@IsReadOnly" />
+                </div>
+
+                <!-- Callback URL (Read-only) -->
+                <div class="form-group">
+                    <label class="form-label">Webhook Callback URL (Read-only)</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <input type="text" class="custom-input" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;" value="@CallbackUrl" disabled />
+                        <button type="button" class="copy-btn" @onclick="CopyCallbackUrl">Copy</button>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="form-group full-width" style="display: flex; flex-direction: row; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+                    @if (IsReadOnly)
+                    {
+                        <button class="btn-secondary" type="button" @onclick='() => Navigation.NavigateTo("/leads-center/whatsapp")'>
+                            Back to Agent
+                        </button>
+                        <button class="btn-action" type="button" @onclick="EnableEditing">
+                            ✏️ Edit Configuration
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn-secondary" type="button" @onclick="CancelEditing">
+                            Cancel
+                        </button>
+                        <button class="btn-action" type="button" @onclick="SaveConfig" disabled="@IsSaving">
+                            @if (IsSaving)
+                            {
+                                <span>Saving Credentials...</span>
+                            }
+                            else
+                            {
+                                <span>Save Configuration</span>
+                            }
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private WhatsappConfig Config { get; set; } = new();
+    private bool ShowToken { get; set; } = false;
+    private bool IsSaving { get; set; } = false;
+    private bool ShowSuccessAlert { get; set; } = false;
+    private bool IsReadOnly { get; set; } = true;
+    private string _savedToken { get; set; } = string.Empty;
+
+    private string CallbackUrl => $"{Navigation.BaseUri}api/leads/whatsapp/{AuthService.CurrentUser?.LocalId ?? "user-id"}";
+
+    private string TokenPlaceholder => IsReadOnly
+        ? (string.IsNullOrEmpty(_savedToken) ? "No token configured" : "••••••••••••••••••••••••••••••••")
+        : "Enter permanent bearer token (EAA...)";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        var savedConfig = await WhatsappService.GetConfigAsync(userId);
+        if (savedConfig != null)
+        {
+            Config = savedConfig;
+            _savedToken = savedConfig.AccessToken;
+
+            // Check if configuration exists
+            if (!string.IsNullOrEmpty(Config.PhoneNumberId) && !string.IsNullOrEmpty(Config.WabaId) && !string.IsNullOrEmpty(_savedToken))
+            {
+                IsReadOnly = true;
+            }
+            else
+            {
+                IsReadOnly = false;
+            }
+
+            // Clear token in model for UI safety
+            Config.AccessToken = string.Empty;
+        }
+        else
+        {
+            Config = new WhatsappConfig { UserId = userId };
+            IsReadOnly = false;
+            _savedToken = string.Empty;
+        }
+    }
+
+    private void ToggleTokenVisibility()
+    {
+        ShowToken = !ShowToken;
+    }
+
+    private void EnableEditing()
+    {
+        IsReadOnly = false;
+        Config.AccessToken = string.Empty; // Start empty when editing
+        ShowSuccessAlert = false;
+    }
+
+    private async Task CancelEditing()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null) return;
+
+        var savedConfig = await WhatsappService.GetConfigAsync(userId);
+        if (savedConfig != null && !string.IsNullOrEmpty(savedConfig.PhoneNumberId) && !string.IsNullOrEmpty(savedConfig.WabaId))
+        {
+            Config = savedConfig;
+            _savedToken = savedConfig.AccessToken;
+            Config.AccessToken = string.Empty;
+            IsReadOnly = true;
+        }
+        else
+        {
+            Navigation.NavigateTo("/leads-center/whatsapp");
+        }
+    }
+
+    private void AutoFillExample()
+    {
+        Config.PhoneNumberId = "105948301948320";
+        Config.WabaId = "209483019481948";
+        Config.AccessToken = "EAAGyZBZCm1ZBAcBAOfbNz8pM8lZAdYlWp2hQ3G3Wz85t7o9u5v6x1y2z3a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8p9q0r1s2t3u4v5w6x7y8z9";
+        Config.VerifyToken = "whatsapp_verification_secret_2026";
+        ShowSuccessAlert = false;
+    }
+
+    private async Task SaveConfig()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null) return;
+
+        IsSaving = true;
+        ShowSuccessAlert = false;
+        StateHasChanged();
+
+        try
+        {
+            if (string.IsNullOrEmpty(Config.AccessToken))
+            {
+                Config.AccessToken = _savedToken;
+            }
+
+            await WhatsappService.SaveConfigAsync(userId, Config);
+
+            _savedToken = Config.AccessToken;
+            Config.AccessToken = string.Empty;
+
+            IsReadOnly = true;
+            ShowSuccessAlert = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving WhatsApp configuration: {ex.Message}");
+        }
+        finally
+        {
+            IsSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CopyCallbackUrl()
+    {
+        // Simple console trigger, in production Web JS Interop is used but since it's a mock copy works
+        Console.WriteLine($"Callback URL copied: {CallbackUrl}");
+    }
+}

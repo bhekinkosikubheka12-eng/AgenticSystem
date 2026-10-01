@@ -1,0 +1,303 @@
+@using AgenticSystem.Services
+@using AgenticSystem.Data
+@inject FirebaseAuthService AuthService
+
+<style>
+    .auth-overlay {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        width: 100%;
+        background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0c0f1d 70%, #030712 100%);
+        padding: 1.5rem;
+    }
+
+    .auth-card {
+        background: rgba(30, 41, 59, 0.45);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        box-shadow: 0 15px 35px 0 rgba(0, 0, 0, 0.4);
+        width: 100%;
+        max-width: 440px;
+        overflow: hidden;
+        animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @@keyframes scaleIn {
+        from {
+            transform: scale(0.95);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .auth-tabs {
+        display: flex;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .auth-tab {
+        flex: 1;
+        background: none;
+        border: none;
+        color: #64748b;
+        padding: 1.25rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        border-bottom: 2px solid transparent;
+    }
+
+    .auth-tab:hover {
+        color: #cbd5e1;
+    }
+
+    .auth-tab.active {
+        color: #38bdf8;
+        border-bottom-color: #38bdf8;
+        background: rgba(56, 189, 248, 0.03);
+    }
+
+    .auth-body {
+        padding: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+        display: block;
+        color: #94a3b8;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .auth-input {
+        width: 100%;
+        padding: 0.8rem 1.1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(15, 23, 42, 0.6);
+        color: white;
+        font-size: 0.95rem;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+
+    .auth-input:focus {
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    .auth-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        border: none;
+        color: white;
+        padding: 0.85rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+        margin-top: 1.5rem;
+    }
+
+    .auth-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(2, 132, 199, 0.4);
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    }
+
+    .auth-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .alert-banner {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-radius: 8px;
+        color: #f87171;
+        padding: 0.75rem 1rem;
+        font-size: 0.85rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    @@media (max-width: 480px) {
+        .auth-overlay {
+            padding: 0.75rem !important;
+        }
+
+        .auth-card {
+            border-radius: 16px !important;
+        }
+
+        .auth-body {
+            padding: 1.25rem !important;
+        }
+
+        .auth-input {
+            padding: 0.8rem 1rem !important;
+            font-size: 0.95rem !important;
+            min-height: 44px !important;
+        }
+
+        .auth-btn {
+            padding: 0.85rem !important;
+            min-height: 44px !important;
+        }
+
+        .auth-tab {
+            padding: 1rem 0.75rem !important;
+            font-size: 0.9rem !important;
+        }
+    }
+</style>
+
+<div class="auth-overlay">
+    <div class="auth-card">
+        <!-- Brand Header -->
+        <div style="padding: 2.25rem 2rem 1rem 2rem; text-align: center;">
+            <div style="font-size: 2.25rem; margin-bottom: 0.25rem;">🤖</div>
+            <h2 style="margin: 0; background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; font-size: 1.75rem;">Agentic OS Login</h2>
+            <p style="color: #64748b; margin: 0.25rem 0 0 0; font-size: 0.9rem;">Sign in to sync your autonomous execution workspace</p>
+        </div>
+
+        <!-- Auth Tabs -->
+        <div class="auth-tabs">
+            <button class="auth-tab @(ActiveTab == "login" ? "active" : "")" @onclick='() => SetTab("login")'>Sign In</button>
+            <button class="auth-tab @(ActiveTab == "register" ? "active" : "")" @onclick='() => SetTab("register")'>Create Account</button>
+        </div>
+
+        <div class="auth-body">
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert-banner">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    <span>@ErrorMessage</span>
+                </div>
+            }
+
+            <form @onsubmit="HandleAuth" method="post">
+                <div class="form-group">
+                    <label class="form-label" for="email">Email Address</label>
+                    <input type="email" id="email" @bind="Email" class="auth-input" placeholder="you@example.com" required autocomplete="username" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" @bind="Password" class="auth-input" placeholder="••••••••" required autocomplete="current-password" />
+                </div>
+
+                @if (ActiveTab == "register")
+                {
+                    <div class="form-group">
+                        <label class="form-label" for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" @bind="ConfirmPassword" class="auth-input" placeholder="••••••••" required autocomplete="new-password" />
+                    </div>
+                }
+
+                <button type="submit" disabled="@IsSubmitting" class="auth-btn">
+                    @if (IsSubmitting)
+                    {
+                        <span style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 1rem; height: 1rem; border-width: 0.15em;"></span>
+                            Authenticating...
+                        </span>
+                    }
+                    else
+                    {
+                        <span style="color:#fff;">@(ActiveTab == "login" ? "Sign In" : "Register Workspace")</span>
+                    }
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnLoginSuccess { get; set; }
+
+    private string ActiveTab { get; set; } = "login";
+    private string Email { get; set; } = string.Empty;
+    private string Password { get; set; } = string.Empty;
+    private string ConfirmPassword { get; set; } = string.Empty;
+    private string ErrorMessage { get; set; } = string.Empty;
+    private bool IsSubmitting { get; set; } = false;
+
+    private void SetTab(string tab)
+    {
+        ActiveTab = tab;
+        ErrorMessage = string.Empty;
+        Password = string.Empty;
+        ConfirmPassword = string.Empty;
+    }
+
+    private async Task HandleAuth()
+    {
+        if (IsSubmitting) return;
+
+        ErrorMessage = string.Empty;
+        IsSubmitting = true;
+
+        try
+        {
+            if (ActiveTab == "register")
+            {
+                if (Password != ConfirmPassword)
+                {
+                    ErrorMessage = "Passwords do not match.";
+                    IsSubmitting = false;
+                    return;
+                }
+
+                var result = await AuthService.RegisterAsync(Email, Password);
+                if (result.IsSuccess)
+                {
+                    await OnLoginSuccess.InvokeAsync();
+                }
+                else
+                {
+                    ErrorMessage = result.Message;
+                }
+            }
+            else // login
+            {
+                var result = await AuthService.LoginAsync(Email, Password);
+                if (result.IsSuccess)
+                {
+                    await OnLoginSuccess.InvokeAsync();
+                }
+                else
+                {
+                    ErrorMessage = result.Message;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Authentication error: {ex.Message}";
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+}

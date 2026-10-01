@@ -1,0 +1,1096 @@
+@page "/dashboard"
+@using AgenticSystem.Data
+@using AgenticSystem.Services
+@inject AgentOrchestrator Orchestrator
+@inject FirebaseLoggerService FirebaseService
+@inject QdrantMemoryService MemoryService
+@inject ChatSessionService SessionService
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<PageTitle>Agentic Command Operations Center</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    .dashboard-container {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f172a 50%, #020617 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .gradient-text {
+        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #ec4899 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .badge-gemini {
+        background: rgba(99, 102, 241, 0.15);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        color: #818cf8;
+    }
+
+    .badge-firebase {
+        background: rgba(245, 158, 11, 0.15);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        color: #fbbf24;
+    }
+
+    .badge-qdrant {
+        background: rgba(236, 72, 153, 0.15);
+        border: 1px solid rgba(236, 72, 153, 0.3);
+        color: #f472b6;
+    }
+
+    .pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .pulse-green {
+        background-color: #10b981;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        animation: pulseGreen 2s infinite;
+    }
+
+    .pulse-amber {
+        background-color: #f59e0b;
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+        animation: pulseAmber 2s infinite;
+    }
+
+    @@keyframes pulseGreen {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    @@keyframes pulseAmber {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+
+    /* Chat layout wrappers */
+    .chat-interface-wrapper {
+        display: flex;
+        gap: 1.5rem;
+        height: calc(100vh - 11rem);
+        min-height: 550px;
+        position: relative;
+    }
+
+    .session-sidebar {
+        width: 260px;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 1.25rem;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+    }
+
+    .session-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        overflow-y: auto;
+        flex: 1;
+        padding-right: 0.25rem;
+    }
+
+    .session-item {
+        padding: 0.75rem;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .session-item:hover {
+        background: rgba(56, 189, 248, 0.08);
+        border-color: rgba(56, 189, 248, 0.2);
+    }
+
+    .session-item.active {
+        background: rgba(56, 189, 248, 0.15);
+        border-color: #38bdf8;
+    }
+
+    .session-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #e2e8f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .session-date {
+        font-size: 0.7rem;
+        color: #64748b;
+        margin-top: 0.25rem;
+    }
+
+    .btn-new-session {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        border: none;
+        color: white;
+        padding: 0.65rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        width: 100%;
+        text-align: center;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+    }
+
+    .btn-new-session:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(2, 132, 199, 0.4);
+    }
+
+    .chat-pane {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: rgba(15, 23, 42, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        overflow: hidden;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .chat-messages-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        scroll-behavior: smooth;
+    }
+
+    /* Message rows and bubbles */
+    .message-row {
+        display: flex;
+        width: 100%;
+    }
+
+    .message-row.user-row {
+        justify-content: flex-end;
+    }
+
+    .message-row.agent-row {
+        justify-content: flex-start;
+    }
+
+    .message-bubble {
+        max-width: 80%;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .user-bubble {
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e1b4b 100%);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 16px 16px 2px 16px;
+        color: #f8fafc;
+    }
+
+    .agent-bubble {
+        background: rgba(30, 41, 59, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px 16px 16px 2px;
+        color: #f8fafc;
+        transition: border-left 0.2s ease;
+    }
+
+    .agent-bubble.log-completed {
+        border-left: 4px solid #10b981;
+    }
+
+    .agent-bubble.log-running {
+        border-left: 4px solid #38bdf8;
+    }
+
+    .agent-bubble.log-failed {
+        border-left: 4px solid #ef4444;
+    }
+
+    .bubble-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.8rem;
+        color: #94a3b8;
+    }
+
+    .user-bubble .bubble-meta {
+        justify-content: flex-end;
+        color: #93c5fd;
+    }
+
+    .bubble-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+        font-weight: bold;
+    }
+
+    .user-avatar {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .agent-avatar {
+        background: rgba(129, 140, 248, 0.2);
+        border: 1px solid rgba(129, 140, 248, 0.4);
+        color: #818cf8;
+    }
+
+    /* Trace Details Accordion */
+    .trace-details {
+        margin-top: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.4);
+        overflow: hidden;
+    }
+
+    .trace-summary {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #cbd5e1;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.2s ease;
+        outline: none;
+    }
+
+    .trace-summary:hover {
+        background: rgba(255, 255, 255, 0.03);
+        color: #f1f5f9;
+    }
+
+    .trace-details[open] .trace-summary {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .code-block {
+        font-family: 'JetBrains Mono', monospace;
+        background: #020617;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        border-radius: 8px;
+        color: #cbd5e1;
+        font-size: 0.85rem;
+        overflow-x: auto;
+        max-height: 250px;
+    }
+
+    /* Chat Footer & Inputs */
+    .chat-footer {
+        padding: 1.25rem;
+        background: rgba(15, 23, 42, 0.6);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .suggestions-bar {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .suggestion-tag {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+        color: #94a3b8;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: left;
+        line-height: 1.4;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .suggestion-tag:hover {
+        background: rgba(56, 189, 248, 0.1);
+        border-color: rgba(56, 189, 248, 0.3);
+        color: #38bdf8;
+        transform: translateY(-1px);
+    }
+
+    .chat-input-row {
+        display: flex;
+        align-items: center;
+        position: relative;
+        width: 100%;
+    }
+
+    .chat-input-wrapper {
+        position: relative;
+        width: 100%;
+        display: flex;
+        align-items: center;
+    }
+
+    .chat-input-field {
+        width: 100%;
+        padding: 0.85rem 3.5rem 0.85rem 1.2rem;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(2, 6, 17, 0.75);
+        color: white;
+        font-size: 1rem;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+
+    .chat-input-field:focus {
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    .inline-send-btn {
+        position: absolute;
+        right: 0.5rem;
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        border: none;
+        color: white;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+    }
+
+    .inline-send-btn:hover:not(:disabled) {
+        transform: scale(1.05);
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    }
+
+    .inline-send-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: rgba(255, 255, 255, 0.05);
+        color: #475569;
+        box-shadow: none;
+    }
+
+    /* Diagnostics Sidebar drawer */
+    .chat-sidebar {
+        width: 320px;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .chat-sidebar.collapsed {
+        width: 0;
+        margin: 0;
+        opacity: 0;
+        pointer-events: none;
+        overflow: hidden;
+    }
+
+    .sidebar-toggle-trigger {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #94a3b8;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .sidebar-toggle-trigger:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #f8fafc;
+    }
+
+    .glass-panel {
+        background: rgba(30, 41, 59, 0.45);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        padding: 1.5rem;
+    }
+
+    /* Filter Bar Styles */
+    .filter-select {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: #cbd5e1;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.85rem;
+        outline: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .filter-select:focus {
+        border-color: #38bdf8;
+    }
+
+    .filter-date-input {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: #cbd5e1;
+        padding: 0.35rem 0.5rem;
+        font-size: 0.8rem;
+        outline: none;
+    }
+
+    /* Responsive media queries */
+    @@media (max-width: 1024px) {
+        .chat-interface-wrapper {
+            flex-direction: column;
+            height: auto;
+        }
+
+        .chat-pane {
+            height: calc(100vh - 14rem);
+            min-height: 480px;
+        }
+
+        .chat-sidebar {
+            width: 100%;
+        }
+
+        .chat-sidebar.collapsed {
+            display: none;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .dashboard-container {
+            padding: 1rem !important;
+        }
+
+        .dashboard-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 1rem !important;
+            padding-bottom: 1rem !important;
+            margin-bottom: 1.5rem !important;
+        }
+
+        .dashboard-title {
+            font-size: 1.6rem !important;
+        }
+
+        .chat-pane {
+            height: calc(100vh - 15rem);
+            min-height: 400px;
+        }
+
+        .message-bubble {
+            max-width: 90% !important;
+        }
+    }
+</style>
+
+<div class="dashboard-container">
+    <!-- Top Brand & Header -->
+    <header class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1.5rem;">
+        <div>
+            <h1 class="gradient-text dashboard-title" style="margin: 0; font-size: 2.2rem;">Agentic OS Core Command</h1>
+            <p class="dashboard-subtitle" style="color: #94a3b8; margin: 0.25rem 0 0 0; font-size: 1rem;">Enterprise Operations Control & Gemini Agent Ledger</p>
+        </div>
+        
+         Live Integration Status Bar 
+        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <div class="badge-status badge-gemini">
+                <span class="pulse-dot pulse-green"></span>
+                HumanicAgent: Active
+            </div>
+            
+            <div class="badge-status badge-qdrant">
+                @if (MemoryService.IsFallbackActive)
+                {
+                    <span class="pulse-dot pulse-amber"></span>
+                    <span>Qdrant: Memory Fallback</span>
+                }
+                else
+                {
+                    <span class="pulse-dot pulse-green"></span>
+                    <span>Qdrant: Online</span>
+                }
+            </div>
+
+            <div class="badge-status badge-firebase">
+                @if (IsFirebaseFallbackActive)
+                {
+                    <span class="pulse-dot pulse-amber"></span>
+                    <span>Database: Local Fallback</span>
+                }
+                else
+                {
+                    <span class="pulse-dot pulse-green"></span>
+                    <span>Database: Stream Connected</span>
+                }
+            </div>
+
+            <!-- Toggle Diagnostics Sidebar -->
+            <button class="sidebar-toggle-trigger" @onclick="ToggleDiagnostics" title="Toggle Diagnostics Sidebar">
+                @if (isSidebarOpen)
+                {
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                }
+                else
+                {
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+                }
+            </button>
+        </div> 
+    </header>
+
+    <div class="chat-interface-wrapper">
+        <!-- Sessions Sidebar (Left) -->
+        <div class="session-sidebar">
+            <button class="btn-new-session" @onclick="CreateNewSession">
+                + New Chat
+            </button>
+            <div class="session-list">
+                @foreach (var session in Sessions)
+                {
+                    <div class="session-item @(ActiveSession?.Id == session.Id ? "active" : "")" @onclick="() => SelectSession(session)">
+                        <div class="session-title" title="@session.Title">@session.Title</div>
+                        <div class="session-date">@session.CreatedAt.ToLocalTime().ToString("g")</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Main Chat Pane -->
+        <div class="chat-pane">
+            <!-- Filter Bar -->
+            <div class="chat-filter-bar" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.25rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: rgba(15, 23, 42, 0.4); flex-wrap: wrap;">
+                <span style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.25rem;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                    History Filter:
+                </span>
+                <select @bind="SelectedFilter" @bind:after="OnFilterChanged" class="filter-select">
+                    <option value="all">All History</option>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="week">This Week</option>
+                    <option value="custom">Custom Date Range</option>
+                </select>
+
+                @if (SelectedFilter == "custom")
+                {
+                    <div style="display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <input type="date" @bind="CustomStartDate" @bind:after="StateHasChanged" class="filter-date-input" />
+                        <span style="color: #64748b; font-size: 0.8rem;">to</span>
+                        <input type="date" @bind="CustomEndDate" @bind:after="StateHasChanged" class="filter-date-input" />
+                    </div>
+                }
+            </div>
+
+            <!-- Messages history -->
+            <div class="chat-messages-container" id="chat-messages">
+                @if (!Messages.Any())
+                {
+                    <div style="margin: auto; text-align: center; max-width: 450px; padding: 2rem;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🤖</div>
+                        <h3 style="color: #cbd5e1; font-weight: 700; margin-bottom: 0.5rem;">Agentic Command Terminal</h3>
+                        <p style="color: #64748b; font-size: 0.95rem; line-height: 1.5; margin: 0;">
+                            No active pipeline traces detected. Enter an objective or choose one of the suggested prompts below to deploy an autonomous agent.
+                        </p>
+                    </div>
+                }
+                else if (!GetFilteredMessages().Any())
+                {
+                    <div style="margin: auto; text-align: center; max-width: 450px; padding: 2rem;">
+                        <div style="font-size: 2.5rem; margin-bottom: 1rem;">📅</div>
+                        <h4 style="color: #cbd5e1; font-weight: 600; margin-bottom: 0.5rem;">No Logs In This Period</h4>
+                        <p style="color: #64748b; font-size: 0.95rem; line-height: 1.4; margin: 0;">
+                            No logs match the chosen date filter. Try selecting 'All History' or a different date range.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var msg in GetFilteredMessages())
+                    {
+                        @if (msg.Sender == "User")
+                        {
+                            <!-- User Prompt Bubble -->
+                            <div class="message-row user-row">
+                                <div class="message-bubble user-bubble">
+                                    <div class="bubble-meta">
+                                        <span>You</span>
+                                        <div class="bubble-avatar user-avatar">👤</div>
+                                    </div>
+                                    <div style="font-size: 0.95rem; line-height: 1.5;">@msg.Text</div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            var cleanStatus = CleanStatus(msg.Text);
+                            <!-- Agent Thought Bubble -->
+                            <div class="message-row agent-row">
+                                <div class="message-bubble agent-bubble @GetLogStatusClass(cleanStatus).ToLower()">
+                                    <div class="bubble-meta">
+                                        <div class="bubble-avatar agent-avatar">🤖</div>
+                                        <strong style="color: #818cf8;">Gemini Orchestrator</strong>
+                                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;">(ID: @(msg.Id.Length > 8 ? msg.Id.Substring(0, 8) : msg.Id))</span>
+                                        <span class="badge-status" style="background: @GetStatusBgColor(cleanStatus); color: @GetStatusTextColor(cleanStatus); font-size: 0.65rem; padding: 0.15rem 0.5rem; margin-left: auto;">
+                                            <span class="pulse-dot @GetStatusPulseClass(cleanStatus)"></span>
+                                            @cleanStatus
+                                        </span>
+                                    </div>
+                                    
+                                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <div style="font-size: 0.95rem; line-height: 1.5; white-space: pre-line;">@msg.Thought</div>
+
+                                        @if (!string.IsNullOrEmpty(msg.ToolOutput))
+                                        {
+                                            <details class="trace-details">
+                                                <summary class="trace-summary">⚙️ View Execution Trace</summary>
+                                                <div class="code-block" style="border: none; margin-top: 0; color: #a7f3d0; background: #022c22; max-height: 250px;">@msg.ToolOutput</div>
+                                            </details>
+                                        }
+                                        
+                                        <div style="display: flex; justify-content: flex-end; margin-top: 0.25rem;">
+                                            <small style="color: #475569; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;">
+                                                @msg.Timestamp.ToLongTimeString()
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                }
+            </div>
+
+            <!-- Footer input area -->
+            <div class="chat-footer">
+                <!-- Suggestions Floating Above Input -->
+                <div class="suggestions-bar">
+                    <div style="display: flex; gap: 0.5rem; width: 100%;">
+                        <button class="suggestion-tag" style="flex: 1;" @onclick='() => ApplySuggestion("Fetch current system metrics and calculate the risk factor for a target intensity of 4.5.")'>
+                            ⚡ "Fetch current system metrics..."
+                        </button>
+                        <button class="suggestion-tag" style="flex: 1;" @onclick='() => ApplySuggestion("Analyze system load metrics and evaluate risk calculation for intensity scaling at 9.81.")'>
+                            🔍 "Analyze system load metrics..."
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Input bar row -->
+                <div class="chat-input-row">
+                    <div class="chat-input-wrapper">
+                        <input @bind="UserPrompt" @bind:event="oninput" @onkeypress="HandleKeyPress" placeholder="Type an objective for the Gemini Autonomous Agent..." class="chat-input-field" disabled="@IsProcessing" />
+                        <button @onclick="TriggerWorkflow" disabled="@(IsProcessing || string.IsNullOrWhiteSpace(UserPrompt))" class="inline-send-btn" title="Deploy Agent">
+                            @if (IsProcessing)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 1.1rem; height: 1.1rem; border-width: 0.15em;"></span>
+                            }
+                            else
+                            {
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform: rotate(45deg); margin-top: -2px; margin-right: 2px;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Diagnostics Drawer (Right) -->
+        <div class="chat-sidebar @(isSidebarOpen ? "" : "collapsed")">
+            <!-- Active Business Context Card -->
+            @if (UserProfile != null)
+            {
+                <div class="glass-panel" style="padding: 1.5rem; border-color: rgba(16, 185, 129, 0.25); background: rgba(16, 185, 129, 0.02);">
+                    <h4 style="margin-top: 0; color: #10b981; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                        Active Business Context
+                    </h4>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem; color: #cbd5e1;">
+                        <div>
+                            <strong style="color: #94a3b8; display: block; font-size: 0.75rem; text-transform: uppercase;">Company Name</strong>
+                            <span style="font-size: 0.95rem; color: #38bdf8; font-weight: 650;">@UserProfile.BusinessName</span>
+                        </div>
+                        <div>
+                            <strong style="color: #94a3b8; display: block; font-size: 0.75rem; text-transform: uppercase;">Industry</strong>
+                            <span>@UserProfile.BusinessIndustry</span>
+                        </div>
+                        <div>
+                            <strong style="color: #94a3b8; display: block; font-size: 0.75rem; text-transform: uppercase;">Core Description</strong>
+                            <span style="color: #cbd5e1; line-height: 1.4; display: block; max-height: 80px; overflow-y: auto;">@UserProfile.BusinessDescription</span>
+                        </div>
+                        <div>
+                            <strong style="color: #94a3b8; display: block; font-size: 0.75rem; text-transform: uppercase;">Target / Goal</strong>
+                            <span style="color: #cbd5e1; line-height: 1.4; display: block; max-height: 80px; overflow-y: auto;">@UserProfile.TargetAudience</span>
+                        </div>
+                    </div>
+                </div>
+            }
+
+          
+
+          
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    public UserBusinessProfile? UserProfile { get; set; }
+
+    private string UserPrompt { get; set; } = string.Empty;
+    private bool IsProcessing { get; set; } = false;
+    private List<AgentTaskLog> SystemLogs { get; set; } = new();
+    private IDisposable? FirebaseSubscription;
+    private bool IsFirebaseFallbackActive { get; set; } = true;
+    private bool isSidebarOpen { get; set; } = true;
+
+    private string SelectedFilter { get; set; } = "all";
+    private DateTime? CustomStartDate { get; set; }
+    private DateTime? CustomEndDate { get; set; }
+
+    // Chat sessions fields
+    private List<ChatSession> Sessions { get; set; } = new();
+    private ChatSession? ActiveSession { get; set; }
+    private List<ChatMessage> Messages { get; set; } = new();
+
+    private void OnFilterChanged()
+    {
+        if (SelectedFilter != "custom")
+        {
+            CustomStartDate = null;
+            CustomEndDate = null;
+        }
+        else
+        {
+            CustomStartDate = DateTime.Today;
+            CustomEndDate = DateTime.Today;
+        }
+        StateHasChanged();
+    }
+
+    private IEnumerable<ChatMessage> GetFilteredMessages()
+    {
+        var filtered = Messages.AsEnumerable();
+        var today = DateTime.Today;
+
+        switch (SelectedFilter.ToLower())
+        {
+            case "today":
+                filtered = filtered.Where(m => m.Timestamp.ToLocalTime().Date == today);
+                break;
+            case "yesterday":
+                var yesterday = today.AddDays(-1);
+                filtered = filtered.Where(m => m.Timestamp.ToLocalTime().Date == yesterday);
+                break;
+            case "week":
+                var startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+                filtered = filtered.Where(m => m.Timestamp.ToLocalTime().Date >= startOfWeek && m.Timestamp.ToLocalTime().Date <= today);
+                break;
+            case "custom":
+                if (CustomStartDate.HasValue)
+                {
+                    filtered = filtered.Where(m => m.Timestamp.ToLocalTime().Date >= CustomStartDate.Value.Date);
+                }
+                if (CustomEndDate.HasValue)
+                {
+                    filtered = filtered.Where(m => m.Timestamp.ToLocalTime().Date <= CustomEndDate.Value.Date);
+                }
+                break;
+        }
+
+        return filtered.OrderBy(m => m.Timestamp);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (UserProfile != null && Sessions.Count == 0)
+        {
+            await LoadSessionsAsync();
+        }
+    }
+
+    private async Task LoadSessionsAsync()
+    {
+        if (UserProfile == null) return;
+        Sessions = await SessionService.GetSessionsAsync(UserProfile.UserId, "CoreCommand");
+        if (Sessions.Any())
+        {
+            await SelectSession(Sessions.First());
+        }
+        else
+        {
+            await CreateNewSession();
+        }
+    }
+
+    private async Task SelectSession(ChatSession session)
+    {
+        ActiveSession = session;
+        Messages = await SessionService.GetMessagesAsync(session.Id);
+        StateHasChanged();
+    }
+
+    private async Task CreateNewSession()
+    {
+        if (UserProfile == null) return;
+        var title = $"Run - {DateTime.Now:yyyy-MM-dd HH:mm}";
+        var newSession = await SessionService.CreateSessionAsync(UserProfile.UserId, "CoreCommand", title);
+        Sessions.Insert(0, newSession);
+        await SelectSession(newSession);
+    }
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            // Subscribe to reactive logs stream and refresh UI on change
+            FirebaseSubscription = FirebaseService.SubscribeToLogs().Subscribe(eventObject =>
+            {
+                var updatedLog = eventObject.Object;
+                if (updatedLog != null)
+                {
+                    InvokeAsync(async () =>
+                    {
+                        SystemLogs.RemoveAll(l => l.Id == updatedLog.Id);
+                        SystemLogs.Add(updatedLog);
+
+                        if (ActiveSession != null)
+                        {
+                            var existingMsg = Messages.FirstOrDefault(m => m.Id == updatedLog.Id);
+                            if (existingMsg != null)
+                            {
+                                existingMsg.Thought = updatedLog.AgentThought;
+                                existingMsg.ToolOutput = updatedLog.ToolOutput;
+                                existingMsg.Text = "Status: " + updatedLog.Status;
+                                existingMsg.Timestamp = updatedLog.Timestamp;
+                                await SessionService.SaveMessageAsync(existingMsg);
+                            }
+                            else
+                            {
+                                // Create new agent log message in session
+                                var newMsg = new ChatMessage
+                                {
+                                    Id = updatedLog.Id,
+                                    SessionId = ActiveSession.Id,
+                                    Sender = "Agent",
+                                    Text = "Status: " + updatedLog.Status,
+                                    Thought = updatedLog.AgentThought,
+                                    ToolOutput = updatedLog.ToolOutput,
+                                    Timestamp = updatedLog.Timestamp
+                                };
+                                Messages.RemoveAll(m => m.Id == newMsg.Id);
+                                Messages.Add(newMsg);
+                                await SessionService.SaveMessageAsync(newMsg);
+                            }
+                            StateHasChanged();
+                        }
+                    });
+                }
+            });
+        }
+        catch
+        {
+            IsFirebaseFallbackActive = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "const el = document.getElementById('chat-messages'); if (el) el.scrollTop = el.scrollHeight;");
+        }
+        catch
+        {
+            // Ignore JS errors on prerendering or initialization
+        }
+    }
+
+    private void ToggleDiagnostics()
+    {
+        isSidebarOpen = !isSidebarOpen;
+    }
+
+    private void ApplySuggestion(string suggestion)
+    {
+        UserPrompt = suggestion;
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !IsProcessing && !string.IsNullOrWhiteSpace(UserPrompt))
+        {
+            await TriggerWorkflow();
+        }
+    }
+
+    private async Task TriggerWorkflow()
+    {
+        if (string.IsNullOrWhiteSpace(UserPrompt) || ActiveSession == null) return;
+
+        try
+        {
+            IsProcessing = true;
+            string trackingId = Guid.NewGuid().ToString();
+            var securePrompt = UserPrompt;
+            UserPrompt = string.Empty;
+
+            // Save user message to active session
+            var userMsg = new ChatMessage
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                SessionId = ActiveSession.Id,
+                Sender = "User",
+                Text = securePrompt,
+                Timestamp = DateTime.UtcNow
+            };
+            Messages.Add(userMsg);
+            await SessionService.SaveMessageAsync(userMsg);
+
+            // Save initial agent message to active session
+            var agentMsg = new ChatMessage
+            {
+                Id = trackingId,
+                SessionId = ActiveSession.Id,
+                Sender = "Agent",
+                Text = "Status: Running",
+                Thought = "Deploying autonomous agent pipeline...",
+                Timestamp = DateTime.UtcNow
+            };
+            Messages.Add(agentMsg);
+            await SessionService.SaveMessageAsync(agentMsg);
+            StateHasChanged();
+
+            // Run fire-and-forget background processing worker thread 
+            _ = Task.Run(async () =>
+            {
+                await Orchestrator.RunWorkflowAsync(trackingId, securePrompt, UserProfile);
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to trigger agent workflow: {ex.Message}");
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    private string CleanStatus(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return "Pending";
+        if (text.StartsWith("Status: ")) return text.Substring(8);
+        return text;
+    }
+
+    private string GetLogStatusClass(string status)
+    {
+        return status switch
+        {
+            "Completed" => "log-completed",
+            "Running" => "log-running",
+            "Failed" => "log-failed",
+            _ => ""
+        };
+    }
+
+    private string GetStatusBgColor(string status)
+    {
+        return status switch
+        {
+            "Completed" => "rgba(16, 185, 129, 0.15)",
+            "Running" => "rgba(56, 189, 248, 0.15)",
+            "Failed" => "rgba(239, 68, 68, 0.15)",
+            _ => "rgba(255, 255, 255, 0.05)"
+        };
+    }
+
+    private string GetStatusTextColor(string status)
+    {
+        return status switch
+        {
+            "Completed" => "#34d399",
+            "Running" => "#38bdf8",
+            "Failed" => "#f87171",
+            _ => "#94a3b8"
+        };
+    }
+
+    private string GetStatusPulseClass(string status)
+    {
+        return status switch
+        {
+            "Completed" => "pulse-green",
+            "Running" => "pulse-amber",
+            "Failed" => "pulse-amber",
+            _ => ""
+        };
+    }
+
+    public void Dispose()
+    {
+        FirebaseSubscription?.Dispose();
+    }
+}

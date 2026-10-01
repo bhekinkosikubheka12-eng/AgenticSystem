@@ -1,0 +1,166 @@
+@page "/privacy"
+@layout PublicLayout
+
+<PageTitle>Privacy Policy &mdash; HumanicBot</PageTitle>
+
+<div class="privacy-container">
+    <div class="privacy-header">
+        <h1>Privacy Policy</h1>
+        <p class="last-updated">Last Updated: June 19, 2026</p>
+    </div>
+
+    <div class="privacy-card">
+        <div class="privacy-section">
+            <h2>1. Local-First Commitment</h2>
+            <p>
+                HumanicBot is built on the core principle of <strong>absolute data sovereignty</strong>. Unlike traditional virtual assistants and chatbots that rely on remote cloud platforms, HumanicBot operates entirely on your physical machine. 
+            </p>
+            <div class="highlight-box">
+                <strong>No Cloud Dependency:</strong> All processing, vector creation, file parsing, and tool execution take place locally in your environment.
+            </div>
+        </div>
+
+        <div class="privacy-section">
+            <h2>2. No Prompts or Telemetry Sent to Us</h2>
+            <p>
+                We do not track, collect, or store any of the following:
+            </p>
+            <ul>
+                <li>Your chat prompts, queries, or directives</li>
+                <li>Your indexed files, source code, or text summaries</li>
+                <li>System-level telemetry, console outputs, or operational logs</li>
+                <li>Database connection strings or application parameters</li>
+            </ul>
+        </div>
+
+        <div class="privacy-section">
+            <h2>3. Third-Party Database Integrations</h2>
+            <p>
+                If you choose to configure external connections&mdash;such as a remote Firebase Realtime Database or a cloud Qdrant Vector database:
+            </p>
+            <ul>
+                <li>Connections are established directly from your local machine to those target services.</li>
+                <li>No intermediate servers owned or managed by HumanicBot act as proxies or log transcribers.</li>
+                <li>You maintain full custody and compliance over credentials, API keys, and connection links.</li>
+            </ul>
+        </div>
+
+        <div class="privacy-section">
+            <h2>4. File System Access</h2>
+            <p>
+                HumanicBot reads file systems within workspaces you explicitly define. It will never perform scanning or indexing operations outside the scopes you authorize. No metadata, file listings, or file fragments are shared with external entities.
+            </p>
+        </div>
+
+        <div class="privacy-section">
+            <h2>5. Data Storage &amp; Portability</h2>
+            <p>
+                All index files and configurations are stored in your user profile app data folder (e.g. <code>C:\Users\&lt;user&gt;\.gemini\antigravity-ide</code> or local folder). You can wipe, move, or back up this data folder at any time. Removing the application completely deletes all memory records.
+            </p>
+        </div>
+
+        <div class="privacy-section">
+            <h2>6. Changes to this Policy</h2>
+            <p>
+                We may update this Privacy Policy from time to time to align with new offline capabilities or local integrations. The latest version will always be published on this page.
+            </p>
+        </div>
+
+        <div class="privacy-section contact-section">
+            <h2>7. Contact Support</h2>
+            <p>
+                If you have questions regarding our offline security practices, please contact our local engineering team at <code>support@@humanicbot.ai</code>.
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .privacy-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 4rem 1rem;
+    }
+
+    .privacy-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .privacy-header h1 {
+        font-size: 2.75rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .last-updated {
+        color: #64748b;
+        font-size: 0.95rem;
+    }
+
+    .privacy-card {
+        background: rgba(30, 41, 59, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        padding: 3rem 2.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 2.5rem;
+    }
+
+    .privacy-section h2 {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin-bottom: 1rem;
+        border-left: 3px solid #38bdf8;
+        padding-left: 0.75rem;
+    }
+
+    .privacy-section p {
+        color: #94a3b8;
+        font-size: 1rem;
+        line-height: 1.7;
+        margin: 0 0 1rem 0;
+    }
+
+    .privacy-section ul {
+        color: #cbd5e1;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        padding-left: 1.5rem;
+        margin: 0;
+    }
+
+    .privacy-section li {
+        margin-bottom: 0.5rem;
+    }
+
+    .highlight-box {
+        background: rgba(56, 189, 248, 0.08);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        color: #38bdf8;
+        padding: 1rem 1.25rem;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        margin-top: 1rem;
+    }
+
+    .contact-section {
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        padding-top: 2rem;
+    }
+
+    @@media (max-width: 640px) {
+        .privacy-card {
+            padding: 2rem 1.25rem;
+        }
+
+        .privacy-header h1 {
+            font-size: 2.25rem;
+        }
+    }
+</style>

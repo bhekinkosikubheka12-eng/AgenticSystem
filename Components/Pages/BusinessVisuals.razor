@@ -1,0 +1,726 @@
+@page "/business-visuals"
+@using AgenticSystem.Data
+@using AgenticSystem.Services
+@inject FirebaseAuthService AuthService
+@inject FirebaseSearchSocialService SearchSocialService
+@inject BusinessArchitectAgentOrchestrator ArchitectOrchestrator
+@implements IDisposable
+
+<PageTitle>Business Blueprint & Progress - Agentic OS</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    .visuals-container {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #111827 0%, #030712 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+        padding: 2.5rem;
+    }
+
+    .glass-panel {
+        background: rgba(17, 24, 39, 0.45);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        padding: 2rem;
+    }
+
+    .gradient-text-magenta {
+        background: linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #6366f1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .badge-viz {
+        background: rgba(236, 72, 153, 0.12);
+        border: 1px solid rgba(236, 72, 153, 0.25);
+        color: #f472b6;
+    }
+
+    /* Grid Layouts */
+    .grid-visuals {
+        display: grid;
+        grid-template-columns: 1.8fr 1.2fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .grid-three-col {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    @@media (max-width: 1024px) {
+        .grid-visuals, .grid-three-col {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Progress Ring Styling */
+    .progress-ring-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        background: rgba(255, 255, 255, 0.01);
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+
+    .circular-progress {
+        position: relative;
+        height: 120px;
+        width: 120px;
+        border-radius: 50%;
+        background: conic-gradient(var(--progress-color, #ec4899) 0deg, rgba(255, 255, 255, 0.05) 0deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.3s ease;
+    }
+
+    .circular-progress::before {
+        content: "";
+        position: absolute;
+        height: 100px;
+        width: 100px;
+        border-radius: 50%;
+        background-color: #0b0f19;
+    }
+
+    .progress-value {
+        position: relative;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #f8fafc;
+    }
+
+    /* Interactive Agent Flow Diagram styling */
+    .topology-diagram {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+        padding: 2rem 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        position: relative;
+    }
+
+    .topology-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 3rem;
+        width: 100%;
+        position: relative;
+        flex-wrap: wrap;
+    }
+
+    .topology-node {
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        text-align: center;
+        min-width: 160px;
+        position: relative;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        cursor: pointer;
+    }
+
+    .topology-node:hover {
+        transform: translateY(-4px) scale(1.03);
+        box-shadow: 0 8px 25px rgba(236, 72, 153, 0.25);
+        border-color: #ec4899;
+    }
+
+    .node-title {
+        font-weight: 700;
+        color: #f1f5f9;
+        font-size: 0.95rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .node-desc {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    .node-ceo { border-color: rgba(245, 158, 11, 0.4); }
+    .node-ceo:hover { box-shadow: 0 8px 25px rgba(245, 158, 11, 0.25); border-color: #fbbf24; }
+    
+    .node-manager { border-color: rgba(56, 189, 248, 0.4); }
+    .node-manager:hover { box-shadow: 0 8px 25px rgba(56, 189, 248, 0.25); border-color: #38bdf8; }
+
+    .node-analyst { border-color: rgba(45, 212, 191, 0.4); }
+    .node-analyst:hover { box-shadow: 0 8px 25px rgba(45, 212, 191, 0.25); border-color: #2dd4bf; }
+
+    .topology-arrow-v {
+        width: 2px;
+        height: 30px;
+        background: linear-gradient(180deg, #ec4899, #6366f1);
+        position: relative;
+    }
+
+    .topology-arrow-v::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: -4px;
+        border-width: 5px 5px 0 5px;
+        border-style: solid;
+        border-color: #6366f1 transparent transparent transparent;
+    }
+
+    .matrix-card {
+        background: rgba(15, 23, 42, 0.35);
+        border: 1px solid rgba(255,255,255,0.03);
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .splitting-arrows {
+        display: flex;
+    }
+
+    .mobile-arrow-connector {
+        display: none;
+    }
+
+    @@media (max-width: 480px) {
+        .visuals-container {
+            padding: 1rem !important;
+        }
+
+        .visuals-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 1rem !important;
+            padding-bottom: 1rem !important;
+            margin-bottom: 1.5rem !important;
+        }
+
+        .visuals-title {
+            font-size: 1.6rem !important;
+            line-height: 1.25 !important;
+        }
+
+        .visuals-subtitle {
+            font-size: 0.9rem !important;
+            line-height: 1.4 !important;
+        }
+
+        .circular-progress {
+            height: 100px !important;
+            width: 100px !important;
+        }
+
+        .circular-progress::before {
+            height: 84px !important;
+            width: 84px !important;
+        }
+
+        .progress-value {
+            font-size: 1.25rem !important;
+        }
+
+        .progress-ring-container {
+            padding: 1rem !important;
+        }
+
+        .grid-visuals {
+            gap: 1.5rem !important;
+        }
+
+        .topology-diagram {
+            padding: 1.25rem 0.75rem !important;
+        }
+
+        .topology-row {
+            flex-direction: column !important;
+            gap: 1rem !important;
+        }
+
+        .topology-node {
+            width: 100% !important;
+            min-width: 0 !important;
+            padding: 0.85rem 1.25rem !important;
+        }
+
+        .splitting-arrows {
+            display: none !important;
+        }
+
+        .mobile-arrow-connector {
+            display: block !important;
+            width: 2px;
+            height: 25px;
+            background: linear-gradient(180deg, #ec4899, #6366f1);
+            position: relative;
+        }
+
+        .mobile-arrow-connector::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: -4px;
+            border-width: 5px 5px 0 5px;
+            border-style: solid;
+            border-color: #6366f1 transparent transparent transparent;
+        }
+
+        .matrix-card {
+            padding: 1rem !important;
+        }
+
+        .glass-panel {
+            padding: 1.25rem !important;
+            border-radius: 12px !important;
+        }
+
+        .btn-action {
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            min-height: 44px !important;
+            padding: 0.85rem 1.5rem !important;
+        }
+    }
+</style>
+
+<div class="visuals-container">
+    <!-- Header -->
+    <header class="visuals-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 1.5rem; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1.5rem;">
+        <div>
+            <h1 class="gradient-text-magenta visuals-title" style="margin: 0; font-size: 2.5rem;">Business Visuals & Analytics</h1>
+            <p class="visuals-subtitle" style="color: #94a3b8; margin: 0.25rem 0 0 0; font-size: 1.1rem;">Interactive visual mapping of your autonomous agent organization and operational health</p>
+        </div>
+        
+        <div class="badge-status badge-viz">
+            📊 Blueprint Analytics
+        </div>
+    </header>
+
+    <!-- Operational Progress Rings -->
+    <div class="grid-three-col">
+        <!-- Directives Completion -->
+        <div class="progress-ring-container">
+            <span style="font-weight: 700; color: #fbbf24; font-size: 0.9rem; text-transform: uppercase;">Directives Completion</span>
+            <div class="circular-progress" style="--progress-color: #fbbf24; background: conic-gradient(#fbbf24 @(DirectivesProgressAngle)deg, rgba(255, 255, 255, 0.05) 0deg);">
+                <span class="progress-value">@DirectivesPercent%</span>
+            </div>
+            <small style="color: #64748b; font-family: 'JetBrains Mono', monospace;">
+                @CompletedDirectives / @TotalDirectives Completed
+            </small>
+        </div>
+
+        <!-- Manager Audit Score -->
+        <div class="progress-ring-container">
+            <span style="font-weight: 700; color: #38bdf8; font-size: 0.9rem; text-transform: uppercase;">Manager Oversight Score</span>
+            <div class="circular-progress" style="--progress-color: #38bdf8; background: conic-gradient(#38bdf8 @(ManagerScoreAngle)deg, rgba(255, 255, 255, 0.05) 0deg);">
+                <span class="progress-value">@AverageManagerScore%</span>
+            </div>
+            <small style="color: #64748b; font-family: 'JetBrains Mono', monospace;">
+                Latest Audit Average
+            </small>
+        </div>
+
+        <!-- Volatile Memory Index Saturation -->
+        <div class="progress-ring-container">
+            <span style="font-weight: 700; color: #2dd4bf; font-size: 0.9rem; text-transform: uppercase;">Memory Integration</span>
+            <div class="circular-progress" style="--progress-color: #2dd4bf; background: conic-gradient(#2dd4bf @(MemoryAngle)deg, rgba(255, 255, 255, 0.05) 0deg);">
+                <span class="progress-value">@MemoryCatalog.Count</span>
+            </div>
+            <small style="color: #64748b; font-family: 'JetBrains Mono', monospace;">
+                Vectors in Qdrant Cache
+            </small>
+        </div>
+    </div>
+
+    <div class="grid-visuals">
+        <!-- Interactive Node Diagram -->
+        <div class="glass-panel">
+            <h3 style="margin-top: 0; color: #f1f5f9; font-weight: 700; font-size: 1.4rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #ec4899;"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+                Corporate Agent Topology
+            </h3>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-top: -1rem; margin-bottom: 2rem;">
+                Hover over or click nodes to check relationship bindings. Real-time connections are managed by the hosted scheduler loop.
+            </p>
+
+            <div class="topology-diagram">
+                <!-- Tier 1: User Onboarding -->
+                <div class="topology-row">
+                    <div class="topology-node" style="border-color: #cbd5e1;">
+                        <div class="node-title" style="color: #cbd5e1;">User Onboarding</div>
+                        <div class="node-desc">Inputs Business Domain Context</div>
+                    </div>
+                </div>
+
+                <div class="topology-arrow-v"></div>
+
+                <!-- Tier 2: CEO Agent -->
+                <div class="topology-row">
+                    <div class="topology-node node-ceo">
+                        <div class="node-title" style="color: #fbbf24;">CEO Agent (Directorship)</div>
+                        <div class="node-desc">Sets high-level targets & directive rules</div>
+                    </div>
+                </div>
+
+                <div class="topology-arrow-v"></div>
+
+                <!-- Tier 3: Manager Agent -->
+                <div class="topology-row">
+                    <div class="topology-node node-manager">
+                        <div class="node-title" style="color: #38bdf8;">Manager Agent (Oversight)</div>
+                        <div class="node-desc">Delegates workflows & audits rating scores</div>
+                    </div>
+                </div>
+
+                <!-- Splitting arrows -->
+                <div class="splitting-arrows" style="display: flex; gap: 8rem; align-items: center; justify-content: center; height: 30px; position: relative; width: 100%;">
+                    <div style="width: 2px; height: 30px; background: #6366f1; position: relative;"></div>
+                    <div style="width: 2px; height: 30px; background: #ec4899; position: relative;"></div>
+                </div>
+                
+                <div class="mobile-arrow-connector"></div>
+
+                <!-- Tier 4: Working Agents -->
+                <div class="topology-row">
+                    <div class="topology-node" style="border-color: #818cf8;">
+                        <div class="node-title" style="color: #818cf8;">Search Agent</div>
+                        <div class="node-desc">Queries competitor trends</div>
+                    </div>
+                    
+                    <div class="mobile-arrow-connector"></div>
+
+                    <div class="topology-node" style="border-color: #f472b6;">
+                        <div class="node-title" style="color: #f472b6;">Social Media Agent</div>
+                        <div class="node-desc">Crafts tailored copywriting posts</div>
+                    </div>
+                </div>
+
+                <div class="splitting-arrows" style="display: flex; gap: 8rem; align-items: center; justify-content: center; height: 30px; position: relative; width: 100%;">
+                    <div style="width: 2px; height: 30px; background: #818cf8; position: relative;"></div>
+                    <div style="width: 2px; height: 30px; background: #f472b6; position: relative;"></div>
+                </div>
+                
+                <div class="mobile-arrow-connector"></div>
+
+                <!-- Tier 5: Data Analyst (Feedback loop) -->
+                <div class="topology-row">
+                    <div class="topology-node node-analyst">
+                        <div class="node-title" style="color: #2dd4bf;">Data Analyst Agent (Memory)</div>
+                        <div class="node-desc">Optimizes Qdrant memory catalog vectors</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Business Blueprint Summary -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <!-- Corporate Strategy Matrix -->
+            <div class="glass-panel" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <h3 style="margin-top: 0; color: #f1f5f9; font-weight: 700; font-size: 1.3rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.75rem;">
+                    📊 Strategy Matrix Blueprint
+                </h3>
+
+                @if (UserProfile != null)
+                {
+                    <div class="matrix-card">
+                        <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #ec4899; letter-spacing: 0.05em;">Target Focus Sector</span>
+                        <h4 style="margin: 0; font-size: 1.1rem; color: #f1f5f9;">@UserProfile.BusinessIndustry</h4>
+                        <p style="margin: 0; font-size: 0.8rem; color: #94a3b8;">
+                            Primary industrial scope analyzed by Search Agent templates.
+                        </p>
+                    </div>
+
+                    <div class="matrix-card">
+                        <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #a855f7; letter-spacing: 0.05em;">Core Competency Vision</span>
+                        <p style="margin: 0; font-size: 0.85rem; color: #cbd5e1; line-height: 1.4;">
+                            @UserProfile.BusinessDescription
+                        </p>
+                    </div>
+
+                    <div class="matrix-card">
+                        <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #6366f1; letter-spacing: 0.05em;">Target Customer Segments</span>
+                        <p style="margin: 0; font-size: 0.85rem; color: #cbd5e1; line-height: 1.4;">
+                            @UserProfile.TargetAudience
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <p style="color: #64748b; font-style: italic;">No active profile configuration. Complete onboarding to show metrics.</p>
+                }
+            </div>
+
+            <!-- Operating Insights -->
+            <div class="glass-panel" style="padding: 1.5rem; background: rgba(236,72,153,0.02); border-color: rgba(236,72,153,0.15);">
+                <h4 style="margin-top: 0; color: #f472b6; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; font-size: 1.1rem;">
+                    💡 Operational Insight
+                </h4>
+                <p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5; margin: 0;">
+                    CEO Directives drive Manager actions, which trigger working agents to fetch news and copywriting items. The Data Analyst indexes these results back into the memory catalog, creating a continuous loop of institutional intelligence.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Business Model Canvas Visuals -->
+    <div class="glass-panel" style="margin-top: 2.5rem; border-color: rgba(245, 158, 11, 0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 style="margin: 0; color: #fbbf24; font-weight: 700; font-size: 1.4rem; display: flex; align-items: center; gap: 0.5rem;">
+                    🏢 Business Model Canvas Visuals
+                </h3>
+                <p style="color: #94a3b8; margin: 0.25rem 0 0 0; font-size: 0.85rem;">
+                    Generated by the Business Architect Agent analyzing profile context and active workflows.
+                </p>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                @if (BusinessModel != null)
+                {
+                    <span style="font-size: 0.75rem; color: #64748b; font-family: 'JetBrains Mono', monospace;">
+                        Mapped: @BusinessModel.Timestamp.ToLocalTime().ToString("g")
+                    </span>
+                }
+                
+                <button class="btn-action" style="background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); color: #0f172a; padding: 0.65rem 1.25rem; border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; border: none;" @onclick="RestructureBusinessModel" disabled="@(IsModelRunning || ModelLoading)">
+                    @if (IsModelRunning)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" style="width: 1rem; height: 1rem; border-width: 0.12em; border-color: #0f172a;"></span>
+                        <span>Restructuring...</span>
+                    }
+                    else
+                    {
+                        <span>Restructure Visuals</span>
+                    }
+                </button>
+            </div>
+        </div>
+
+        @if (ModelLoading)
+        {
+            <div style="text-align: center; padding: 4rem 1.5rem;">
+                <div class="spinner-border text-warning" role="status" style="width: 3.5rem; height: 3.5rem; border-width: 0.25em;"></div>
+                <h4 style="margin-top: 1.5rem; color: #fbbf24; font-weight: 700;">Architecting Corporate Blueprint</h4>
+                <p style="color: #94a3b8; max-width: 450px; margin: 0.5rem auto 0 auto;">
+                    Business Architect Agent is compiling your core model canvas...
+                </p>
+            </div>
+        }
+        else if (BusinessModel == null || !BusinessModel.Sections.Any())
+        {
+            <div style="text-align: center; padding: 3rem 1.5rem;">
+                <p style="color: #64748b; font-style: italic; margin: 0;">Business Model Canvas has not been generated yet.</p>
+                <button class="btn-action" style="margin-top: 1rem; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); color: #0f172a;" @onclick="RestructureBusinessModel">
+                    Generate Business Model Canvas
+                </button>
+            </div>
+        }
+        else
+        {
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                @foreach (var canvasSection in BusinessModel.Sections)
+                {
+                    <div class="glass-panel" style="padding: 1.5rem; border-color: rgba(245, 158, 11, 0.15); background: rgba(245, 158, 11, 0.02); transition: all 0.3s ease; height: 100%; display: flex; flex-direction: column; justify-content: space-between; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);">
+                        <div>
+                            <h4 style="color: #fbbf24; font-weight: 700; font-size: 1.1rem; margin-top: 0; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+                                <span>@GetSectionIcon(canvasSection.SectionName)</span>
+                                <span>@canvasSection.SectionName</span>
+                            </h4>
+                            <p style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.5; margin-bottom: 1rem;">
+                                @canvasSection.Description
+                            </p>
+                        </div>
+                        <div>
+                            <ul style="padding-left: 1.2rem; margin: 0; font-size: 0.85rem; color: #94a3b8; line-height: 1.6;">
+                                @foreach (var bullet in canvasSection.BulletPoints)
+                                {
+                                    <li>@bullet</li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    public UserBusinessProfile? UserProfile { get; set; }
+
+    // Directives progress counts
+    private int TotalDirectives { get; set; } = 0;
+    private int CompletedDirectives { get; set; } = 0;
+    private int DirectivesPercent { get; set; } = 0;
+    private int DirectivesProgressAngle { get; set; } = 0;
+
+    // Manager average score
+    private int AverageManagerScore { get; set; } = 0;
+    private int ManagerScoreAngle { get; set; } = 0;
+
+    // Memory catalog size
+    private List<MemoryCatalogItem> MemoryCatalog { get; set; } = new();
+    private int MemoryAngle { get; set; } = 0;
+
+    // Business model binds
+    private BusinessModelVisual? BusinessModel { get; set; }
+    private bool ModelLoading { get; set; } = false;
+    private bool IsModelRunning { get; set; } = false;
+    private bool hasAttemptedAutoGenerate { get; set; } = false;
+
+    private Timer? RefreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadVisualsData();
+
+        // Refresh visuals parameters every 5 seconds
+        RefreshTimer = new Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadVisualsData();
+                StateHasChanged();
+            });
+        }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+    }
+
+    private async Task LoadVisualsData()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId != null)
+        {
+            // 1. Directives calculation
+            var dirs = await SearchSocialService.GetCeoDirectivesAsync(userId);
+            TotalDirectives = dirs.Count;
+            CompletedDirectives = dirs.Count(d => d.Status == "Completed");
+            DirectivesPercent = TotalDirectives > 0 ? (CompletedDirectives * 100) / TotalDirectives : 0;
+            DirectivesProgressAngle = (DirectivesPercent * 360) / 100;
+
+            // 2. Manager report average score calculation
+            var report = await SearchSocialService.GetManagerReportAsync(userId);
+            if (report != null && report.Reviews.Any())
+            {
+                var validReviews = report.Reviews.Where(r => r.Score > 0).ToList();
+                AverageManagerScore = validReviews.Any() ? (int)validReviews.Average(r => r.Score) : 0;
+            }
+            else
+            {
+                AverageManagerScore = 0;
+            }
+            ManagerScoreAngle = (AverageManagerScore * 360) / 100;
+
+            // 3. Memory Catalog size calculation
+            MemoryCatalog = await SearchSocialService.GetMemoryCatalogAsync(userId);
+            // Angle capped at 360 for up to 20 vectors as 100% saturation
+            var satPercent = Math.Min((MemoryCatalog.Count * 100) / 20, 100);
+            MemoryAngle = (satPercent * 360) / 100;
+
+            // 4. Business model loading
+            BusinessModel = await SearchSocialService.GetBusinessModelAsync(userId);
+            if (BusinessModel == null && !ModelLoading && !IsModelRunning && !hasAttemptedAutoGenerate && UserProfile != null)
+            {
+                hasAttemptedAutoGenerate = true;
+                ModelLoading = true;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var generated = await ArchitectOrchestrator.RunBusinessModelGenerationAsync(userId, UserProfile);
+                        await InvokeAsync(() =>
+                        {
+                            BusinessModel = generated;
+                            ModelLoading = false;
+                            StateHasChanged();
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error running auto business model generation: {ex.Message}");
+                        await InvokeAsync(() => { ModelLoading = false; StateHasChanged(); });
+                    }
+                });
+            }
+        }
+    }
+
+    private async Task RestructureBusinessModel()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null || UserProfile == null) return;
+
+        IsModelRunning = true;
+        StateHasChanged();
+
+        try
+        {
+            BusinessModel = await ArchitectOrchestrator.RunBusinessModelGenerationAsync(userId, UserProfile);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed restructuring model: {ex.Message}");
+        }
+        finally
+        {
+            IsModelRunning = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetSectionIcon(string name)
+    {
+        return name.ToLower() switch
+        {
+            "value propositions" => "💎",
+            "customer segments" => "👥",
+            "channels" => "📣",
+            "customer relationships" => "🤝",
+            "key activities" => "⚙️",
+            "key resources" => "💾",
+            "cost structure" => "💸",
+            "revenue & strategic value" or "revenue streams" => "💰",
+            _ => "📋"
+        };
+    }
+
+    public void Dispose()
+    {
+        RefreshTimer?.Dispose();
+    }
+}

@@ -1,0 +1,653 @@
+@page "/knowledgebase"
+@using AgenticSystem.Data
+@using AgenticSystem.Services
+@using System.IO
+@inject FirebaseAuthService AuthService
+@inject BusinessKnowledgeService KnowledgeService
+@inject FirebaseStorageService StorageService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>Business Knowledgebase - Agentic OS</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    .kb-container {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #062f4f 0%, #0b0f19 70%, #010409 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+        padding: 2.5rem;
+    }
+
+    .glass-panel {
+        background: rgba(30, 41, 59, 0.45);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(16, 185, 129, 0.12);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        padding: 2rem;
+        transition: all 0.3s ease;
+    }
+
+    .glass-panel:hover {
+        box-shadow: 0 15px 35px rgba(16, 185, 129, 0.08);
+    }
+
+    .gradient-text-emerald {
+        background: linear-gradient(135deg, #34d399 0%, #059669 50%, #047857 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .badge-kb {
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        color: #34d399;
+    }
+
+    .btn-action {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: none;
+        color: white;
+        padding: 0.65rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    }
+
+    .btn-action:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    }
+
+    .btn-action:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-danger-custom {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        color: #f87171;
+        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    .btn-danger-custom:hover {
+        background: #ef4444;
+        color: white;
+    }
+
+    .custom-input {
+        width: 100%;
+        padding: 0.65rem 1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.6);
+        color: white;
+        font-size: 0.95rem;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+
+    .custom-input:focus {
+        border-color: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+    }
+
+    /* File Upload styling */
+    .drop-zone {
+        border: 2px dashed rgba(16, 185, 129, 0.3);
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        background: rgba(15, 23, 42, 0.35);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .drop-zone:hover, .drop-zone-dragover {
+        border-color: #10b981;
+        background: rgba(16, 185, 129, 0.05);
+    }
+
+    .hidden-input {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .grid-layout {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 2rem;
+    }
+
+    @@media (max-width: 1024px) {
+        .grid-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .knowledge-card {
+        background: rgba(15, 23, 42, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .knowledge-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .card-note {
+        border-left: 4px solid #10b981;
+    }
+
+    .card-file {
+        border-left: 4px solid #06b6d4;
+    }
+
+    .code-block {
+        font-family: 'JetBrains Mono', monospace;
+        background: #020617;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 0.85rem;
+        border-radius: 8px;
+        color: #cbd5e1;
+        font-size: 0.85rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        max-height: 150px;
+    }
+</style>
+
+<div class="kb-container">
+    <!-- Header -->
+    <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 1.5rem; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1.5rem;">
+        <div>
+            <h1 class="gradient-text-emerald" style="margin: 0; font-size: 2.5rem;">Corporate Knowledgebase</h1>
+            <p style="color: #94a3b8; margin: 0.25rem 0 0 0; font-size: 1.1rem;">Secure business files vault, notes indexer, and semantic LLM memory feeder</p>
+        </div>
+        
+        <div class="badge-status badge-kb">
+            🔒 Secured Database & Vector Sync Active
+        </div>
+    </header>
+
+    @if (AuthService.CurrentUser == null)
+    {
+        <div class="glass-panel" style="text-align: center; padding: 4rem 1.5rem;">
+            <h3 style="color: #f87171; font-weight: 700;">Access Restricted</h3>
+            <p style="color: #cbd5e1; max-width: 450px; margin: 0.5rem auto 1.5rem auto;">
+                Please authenticate using your user profile workspace account to manage knowledgebase variables and retrieve vectors.
+            </p>
+            <button class="btn-action" @onclick='() => Navigation.NavigateTo("/")'>Go to Sign-In</button>
+        </div>
+    }
+    else
+    {
+        <div class="grid-layout">
+            <!-- Left Column: Operations/Forms -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <!-- Add Text Note -->
+                <div class="glass-panel">
+                    <h3 style="margin-top: 0; color: #f1f5f9; font-weight: 700; font-size: 1.3rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                        📝 Write Corporate Note
+                    </h3>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 0.35rem;">Note Title</label>
+                            <input type="text" @bind="NoteTitle" placeholder="e.g. Refund Policy Guidelines..." class="custom-input" />
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 0.35rem;">Note Content</label>
+                            <textarea @bind="NoteContent" placeholder="Enter business rules, operational guidelines, or general company context..." class="custom-input" style="height: 120px; resize: vertical;"></textarea>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(NoteErrorMessage))
+                        {
+                            <div style="font-size: 0.85rem; color: #f87171; text-align: center;">@NoteErrorMessage</div>
+                        }
+                        @if (!string.IsNullOrEmpty(NoteSuccessMessage))
+                        {
+                            <div style="font-size: 0.85rem; color: #34d399; text-align: center;">@NoteSuccessMessage</div>
+                        }
+
+                        <button class="btn-action" style="width: 100%;" @onclick="SaveNote" disabled="@(string.IsNullOrWhiteSpace(NoteTitle) || string.IsNullOrWhiteSpace(NoteContent) || IsSavingNote)">
+                            @if (IsSavingNote)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status" style="width: 1rem; height: 1rem; border-width: 0.12em; margin-right: 0.5rem;"></span>
+                                <span>Saving Note...</span>
+                            }
+                            else
+                            {
+                                <span>Save & Vectorize Note</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Drop/Upload Files -->
+                <div class="glass-panel" style="border-color: rgba(6, 182, 212, 0.15);">
+                    <h3 style="margin-top: 0; color: #f1f5f9; font-weight: 700; font-size: 1.3rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                        📁 Drop Business Files
+                    </h3>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- Drag & Drop Zone -->
+                        <div class="drop-zone @(DragOverClass)" 
+                             @ondragenter="HandleDragEnter" 
+                             @ondragleave="HandleDragLeave"
+                             @ondragover="HandleDragOver">
+                            <InputFile OnChange="HandleFileSelected" class="hidden-input" />
+                            <div style="pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                <span style="font-weight: 600; font-size: 0.95rem; color: #e2e8f0;">Drag files here or click to browse</span>
+                                <span style="font-size: 0.75rem; color: #64748b;">Supports TXT, CSV, MD, JSON, or descriptive PDF (Max 10MB)</span>
+                            </div>
+                        </div>
+
+                        <!-- Custom description/context for file -->
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 0.35rem;">File Description / Context (Recommended)</label>
+                            <textarea @bind="FileDescription" placeholder="Provide extra description about this file's context for the AI agents..." class="custom-input" style="height: 60px; resize: vertical;"></textarea>
+                        </div>
+
+                        @if (SelectedFile != null)
+                        {
+                            <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.75rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; flex-direction: column; gap: 0.15rem; max-width: 75%;">
+                                    <span style="font-size: 0.85rem; font-weight: 700; color: #22d3ee; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@SelectedFile.Name</span>
+                                    <span style="font-size: 0.75rem; color: #94a3b8;">Type: @SelectedFile.ContentType | Size: @FormatSize(SelectedFile.Size)</span>
+                                </div>
+                                <button class="btn-danger-custom" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" @onclick="ClearSelectedFile">Cancel</button>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(FileUploadErrorMessage))
+                        {
+                            <div style="font-size: 0.85rem; color: #f87171; text-align: center;">@FileUploadErrorMessage</div>
+                        }
+                        @if (!string.IsNullOrEmpty(FileUploadSuccessMessage))
+                        {
+                            <div style="font-size: 0.85rem; color: #34d399; text-align: center;">@FileUploadSuccessMessage</div>
+                        }
+
+                        <button class="btn-action" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); width: 100%; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2);" 
+                                @onclick="UploadFile" 
+                                disabled="@(SelectedFile == null || IsUploadingFile)">
+                            @if (IsUploadingFile)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status" style="width: 1rem; height: 1rem; border-width: 0.12em; margin-right: 0.5rem;"></span>
+                                <span>Uploading file to Storage...</span>
+                            }
+                            else
+                            {
+                                <span>Upload & Save File</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Knowledge Ledger / Catalog List -->
+            <div>
+                <h3 style="margin-top: 0; color: #f1f5f9; font-weight: 700; font-size: 1.4rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span>📚 Business Knowledge Inventory</span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: #34d399; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 0.15rem 0.5rem; border-radius: 6px;">
+                        @KnowledgeItems.Count Items
+                    </span>
+                </h3>
+
+                @if (IsLoadingData)
+                {
+                    <div class="glass-panel" style="text-align: center; padding: 4rem 1.5rem;">
+                        <div class="spinner-border text-success" role="status" style="width: 3.5rem; height: 3.5rem; border-width: 0.25em;"></div>
+                        <h4 style="margin-top: 1.5rem; color: #34d399;">Loading Vault Files & Notes...</h4>
+                    </div>
+                }
+                else if (!KnowledgeItems.Any())
+                {
+                    <div class="glass-panel" style="text-align: center; padding: 4rem 1.5rem; background: rgba(30, 41, 59, 0.15);">
+                        <p style="color: #64748b; font-style: italic; margin: 0; font-size: 1.1rem;">The business knowledgebase vault is currently empty.</p>
+                        <p style="color: #475569; font-size: 0.9rem; margin-top: 0.5rem; max-width: 450px; margin-left: auto; margin-right: auto;">
+                            Insert notes or drop files in the left forms to build a corporate database that AI agents will consult dynamically to optimize plans.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+                        @foreach (var item in KnowledgeItems)
+                        {
+                            var isNote = item.FileType == "Note";
+                            <div class="knowledge-card @(isNote ? "card-note" : "card-file")">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                            <span style="font-size: 0.75rem; background: @(isNote ? "rgba(16,185,129,0.15)" : "rgba(6,182,212,0.15)"); border: 1px solid @(isNote ? "rgba(16,185,129,0.3)" : "rgba(6,182,212,0.3)"); color: @(isNote ? "#34d399" : "#22d3ee"); padding: 0.15rem 0.4rem; border-radius: 4px; font-weight: 600; text-transform: uppercase;">
+                                                @(isNote ? "Note" : "File Attachment")
+                                            </span>
+                                            <span style="font-size: 0.75rem; color: #64748b; font-family: 'JetBrains Mono', monospace;">
+                                                UPLOADED: @item.CreatedAt.ToLocalTime().ToString("g")
+                                            </span>
+                                        </div>
+                                        <h4 style="margin: 0 0 0.5rem 0; color: #f1f5f9; font-size: 1.15rem; font-weight: 700;">@item.Title</h4>
+                                        
+                                        @if (!isNote)
+                                        {
+                                            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem; display: flex; gap: 1rem;">
+                                                <span><strong>File Name:</strong> @item.FileName</span>
+                                                <span><strong>Size:</strong> @FormatSize(item.FileSize)</span>
+                                            </div>
+                                        }
+
+                                        <div class="code-block">@item.Content</div>
+                                    </div>
+
+                                    <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">
+                                        <button class="btn-danger-custom" @onclick="() => DeleteKnowledgeItem(item.Id)">
+                                            Delete
+                                        </button>
+                                        @if (!isNote && !string.IsNullOrEmpty(item.FileUrl))
+                                        {
+                                            <a href="@item.FileUrl" target="_blank" class="btn-action" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; text-decoration: none; text-align: center; background: linear-gradient(135deg, #0891b2 0%, #0369a1 100%); box-shadow: none;">
+                                                Open File
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<BusinessKnowledgeItem> KnowledgeItems { get; set; } = new();
+    private bool IsLoadingData { get; set; } = true;
+
+    // Note binds
+    private string NoteTitle { get; set; } = string.Empty;
+    private string NoteContent { get; set; } = string.Empty;
+    private bool IsSavingNote { get; set; } = false;
+    private string NoteSuccessMessage { get; set; } = string.Empty;
+    private string NoteErrorMessage { get; set; } = string.Empty;
+
+    // File binds
+    private IBrowserFile? SelectedFile { get; set; }
+    private string FileDescription { get; set; } = string.Empty;
+    private bool IsUploadingFile { get; set; } = false;
+    private string FileUploadSuccessMessage { get; set; } = string.Empty;
+    private string FileUploadErrorMessage { get; set; } = string.Empty;
+    private string DragOverClass { get; set; } = string.Empty;
+
+    private Timer? AutoRefreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadKnowledgebaseData();
+
+        // Periodically refresh data in background every 6 seconds
+        AutoRefreshTimer = new Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                var userId = AuthService.CurrentUser?.LocalId;
+                if (userId != null)
+                {
+                    KnowledgeItems = await KnowledgeService.GetKnowledgeItemsAsync(userId);
+                    StateHasChanged();
+                }
+            });
+        }, null, TimeSpan.FromSeconds(6), TimeSpan.FromSeconds(6));
+    }
+
+    private async Task LoadKnowledgebaseData()
+    {
+        IsLoadingData = true;
+        StateHasChanged();
+
+        try
+        {
+            var userId = AuthService.CurrentUser?.LocalId;
+            if (userId != null)
+            {
+                KnowledgeItems = await KnowledgeService.GetKnowledgeItemsAsync(userId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load knowledge items: {ex.Message}");
+        }
+        finally
+        {
+            IsLoadingData = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveNote()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null || string.IsNullOrWhiteSpace(NoteTitle) || string.IsNullOrWhiteSpace(NoteContent)) return;
+
+        IsSavingNote = true;
+        NoteSuccessMessage = string.Empty;
+        NoteErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var noteItem = new BusinessKnowledgeItem(
+                Guid.NewGuid().ToString(),
+                userId,
+                NoteTitle,
+                NoteContent,
+                string.Empty, // FileUrl
+                string.Empty, // FileName
+                "Note", // FileType
+                0, // FileSize
+                DateTime.UtcNow
+            );
+
+            await KnowledgeService.SaveKnowledgeItemAsync(noteItem);
+            
+            NoteTitle = string.Empty;
+            NoteContent = string.Empty;
+            NoteSuccessMessage = "Note successfully saved and vectorized!";
+            
+            await LoadKnowledgebaseData();
+
+            await Task.Delay(2500);
+            NoteSuccessMessage = string.Empty;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            NoteErrorMessage = $"Error saving note: {ex.Message}";
+        }
+        finally
+        {
+            IsSavingNote = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        SelectedFile = e.File;
+        FileUploadErrorMessage = string.Empty;
+        FileUploadSuccessMessage = string.Empty;
+    }
+
+    private void ClearSelectedFile()
+    {
+        SelectedFile = null;
+        FileUploadErrorMessage = string.Empty;
+    }
+
+    private async Task UploadFile()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        var idToken = AuthService.CurrentUser?.IdToken;
+        if (userId == null || SelectedFile == null) return;
+
+        IsUploadingFile = true;
+        FileUploadSuccessMessage = string.Empty;
+        FileUploadErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            // Set max allowed size to 10MB
+            long maxFileSize = 10 * 1024 * 1024;
+            if (SelectedFile.Size > maxFileSize)
+            {
+                throw new Exception("File size exceeds the 10MB limit.");
+            }
+
+            // 1. Read file stream (and parse contents if text-based)
+            string extractedContent = $"File attachment context: {FileDescription}";
+            
+            var isTextFile = SelectedFile.Name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ||
+                             SelectedFile.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase) ||
+                             SelectedFile.Name.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ||
+                             SelectedFile.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
+
+            if (isTextFile)
+            {
+                using var memoryStream = new MemoryStream();
+                await SelectedFile.OpenReadStream(maxFileSize).CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
+
+                using var reader = new StreamReader(memoryStream);
+                var text = await reader.ReadToEndAsync();
+                extractedContent = $"[File Content Summary/Details]\n{FileDescription}\n\n[Raw Content]\n{text}";
+            }
+
+            // 2. Upload file to Firebase Storage
+            using var fileStream = SelectedFile.OpenReadStream(maxFileSize);
+            var downloadUrl = await StorageService.UploadFileAsync(
+                userId,
+                SelectedFile.Name,
+                fileStream,
+                SelectedFile.ContentType,
+                idToken
+            );
+
+            // 3. Create metadata item and save in Realtime Database & Vector Memory
+            var fileItem = new BusinessKnowledgeItem(
+                Guid.NewGuid().ToString(),
+                userId,
+                Path.GetFileNameWithoutExtension(SelectedFile.Name),
+                extractedContent,
+                downloadUrl,
+                SelectedFile.Name,
+                SelectedFile.ContentType,
+                SelectedFile.Size,
+                DateTime.UtcNow
+            );
+
+            await KnowledgeService.SaveKnowledgeItemAsync(fileItem);
+
+            FileUploadSuccessMessage = "File uploaded and cataloged successfully!";
+            SelectedFile = null;
+            FileDescription = string.Empty;
+
+            await LoadKnowledgebaseData();
+
+            await Task.Delay(2500);
+            FileUploadSuccessMessage = string.Empty;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            FileUploadErrorMessage = $"File upload failed: {ex.Message}";
+        }
+        finally
+        {
+            IsUploadingFile = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteKnowledgeItem(string itemId)
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        var idToken = AuthService.CurrentUser?.IdToken;
+        if (userId == null) return;
+
+        try
+        {
+            await KnowledgeService.DeleteKnowledgeItemAsync(userId, itemId, idToken);
+            await LoadKnowledgebaseData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to delete item {itemId}: {ex.Message}");
+        }
+    }
+
+    private void HandleDragEnter() => DragOverClass = "drop-zone-dragover";
+    private void HandleDragLeave() => DragOverClass = string.Empty;
+    private void HandleDragOver() => DragOverClass = "drop-zone-dragover";
+
+    private string FormatSize(long bytes)
+    {
+        if (bytes >= 1024 * 1024)
+            return $"{(bytes / 1024f / 1024f):F2} MB";
+        if (bytes >= 1024)
+            return $"{(bytes / 1024f):F1} KB";
+        return $"{bytes} B";
+    }
+
+    public void Dispose()
+    {
+        AutoRefreshTimer?.Dispose();
+    }
+}

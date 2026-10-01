@@ -1,0 +1,107 @@
+@inherits LayoutComponentBase
+@using AgenticSystem.Services
+@using AgenticSystem.Data
+@inject FirebaseAuthService AuthService
+@inject FirebaseProfileService ProfileService
+
+<div class="page @(IsSidebarCollapsed ? "sidebar-collapsed" : "")">
+    @if (AuthService.CurrentUser == null)
+    {
+        <!-- Auth Wall -->
+        <LoginScreen OnLoginSuccess="OnLoginSuccess" />
+    }
+    else if (IsCheckingProfile)
+    {
+        <!-- Glass Loading Overlay -->
+        <div class="onboard-overlay">
+            <div class="glass-panel text-center" style="padding: 3rem; max-width: 400px; width: 100%;">
+                <div class="spinner-border text-info" role="status" style="width: 3rem; height: 3rem; border-width: 0.25em;"></div>
+                <h4 style="margin-top: 1.5rem; color: #38bdf8;">Retrieving Workspace Config</h4>
+                <p style="color: #64748b; margin: 0.5rem 0 0 0; font-size: 0.9rem;">Connecting to profiles database...</p>
+            </div>
+        </div>
+    }
+    else if (UserProfile == null)
+    {
+        <!-- Onboarding Guard -->
+        <OnboardingScreen OnOnboardingSuccess="OnOnboardingSuccess" />
+    }
+    else
+    {
+        <!-- Authenticated Application Layout -->
+        <div class="sidebar">
+            <NavMenu IsCollapsed="IsSidebarCollapsed" OnToggleCollapse="ToggleSidebar" />
+        </div>
+
+        <main>
+            <div class="top-row px-4">
+                <!-- Sidebar Toggle Button -->
+                <button class="sidebar-toggle-btn" @onclick="ToggleSidebar" aria-label="Toggle Navigation">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                
+                <div style="flex-grow: 1;"></div>
+                
+                <!-- User Profile Context Details -->
+                <div class="user-session-bar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #a78bfa;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span class="user-email">@AuthService.CurrentUser.Email</span>
+                    
+                    <button class="btn-logout" @onclick="Logout" title="Sign Out">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <article class="content px-4">
+                <CascadingValue Value="UserProfile">
+                    @Body
+                </CascadingValue>
+            </article>
+        </main>
+    }
+</div>
+
+@code {
+    private bool IsSidebarCollapsed { get; set; } = false;
+    private bool IsCheckingProfile { get; set; } = false;
+    private UserBusinessProfile? UserProfile { get; set; }
+
+    private void ToggleSidebar()
+    {
+        IsSidebarCollapsed = !IsSidebarCollapsed;
+    }
+
+    private async Task OnLoginSuccess()
+    {
+        IsCheckingProfile = true;
+        StateHasChanged();
+
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId != null)
+        {
+            UserProfile = await ProfileService.GetProfileAsync(userId);
+        }
+
+        IsCheckingProfile = false;
+        StateHasChanged();
+    }
+
+    private void OnOnboardingSuccess(UserBusinessProfile profile)
+    {
+        UserProfile = profile;
+        StateHasChanged();
+    }
+
+    private void Logout()
+    {
+        AuthService.Logout();
+        UserProfile = null;
+        StateHasChanged();
+    }
+}

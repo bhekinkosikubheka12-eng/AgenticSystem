@@ -1,0 +1,434 @@
+@page "/leads-center/website-form"
+@using AgenticSystem.Data
+@using AgenticSystem.Services
+@using System.Net.Http
+@using System.Text
+@using System.Text.Json
+@inject FirebaseAuthService AuthService
+@inject FirebaseLeadsService LeadsService
+@inject LeadsCenterOrchestrator LeadsOrchestrator
+@inject NavigationManager Navigation
+@inject HttpClient Http
+
+<PageTitle>Website Form Agent - Agentic OS</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    .web-container {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #78350f 0%, #0c0d16 60%, #020308 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+        padding: 2.5rem;
+    }
+
+    @@media (max-width: 768px) {
+        .web-container {
+            padding: 1.25rem;
+        }
+    }
+
+    .glass-panel {
+        background: rgba(30, 41, 59, 0.45);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(245, 158, 11, 0.15); /* Amber/Orange theme border */
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        padding: 1.5rem;
+    }
+
+    .grid-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    @@media (max-width: 1024px) {
+        .grid-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .code-block {
+        font-family: 'JetBrains Mono', monospace;
+        background: #020617;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        border-radius: 8px;
+        color: #fbbf24;
+        font-size: 0.82rem;
+        overflow-x: auto;
+        margin-top: 0.5rem;
+        white-space: pre;
+    }
+
+    .custom-input {
+        width: 100%;
+        padding: 0.75rem 1.1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.6);
+        color: white;
+        font-size: 0.9rem;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+
+    .custom-input:focus {
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+    }
+
+    .btn-action {
+        background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+        border: none;
+        color: #0f172a;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+    }
+
+    .btn-action:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+        background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+    }
+
+    .btn-action:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .status-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .status-sent { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+    .inbox-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .inbox-card {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: left;
+    }
+
+    .inbox-card:hover {
+        border-color: rgba(245, 158, 11, 0.3);
+        background: rgba(15, 23, 42, 0.6);
+    }
+
+    .inbox-card.active {
+        border-color: #fbbf24;
+        background: rgba(245, 158, 11, 0.08);
+    }
+</style>
+
+<div class="web-container">
+    <!-- Header -->
+    <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 1.5rem; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="margin: 0; font-size: 2.3rem; font-weight: 800; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🌐 Website Form Agent</h1>
+            <p style="color: #94a3b8; margin: 0.25rem 0 0 0; font-size: 1rem;">Listens to website form inputs via dedicated API webhooks, generating auto-replies instantly</p>
+        </div>
+        <button class="btn-action" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); color: #cbd5e1; box-shadow: none;" @onclick='() => Navigation.NavigateTo("/leads-center")'>
+            Back to Leads Center
+        </button>
+    </header>
+
+    <!-- API Endpoint Card -->
+    <div class="glass-panel" style="margin-bottom: 2rem;">
+        <h3 style="margin-top: 0; color: #f1f5f9; font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+            🔌 Unique API Endpoint Webhook
+        </h3>
+        <p style="font-size: 0.9rem; color: #94a3b8; margin-top: -0.25rem;">
+            Copy this endpoint URL and use it in your website's contact form backend to stream submissions directly into this agent workspace.
+        </p>
+
+        <div style="background: #020617; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 0.85rem 1.2rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; color: #fcd34d; word-break: break-all;">
+                POST @(Navigation.BaseUri)api/leads/website-form/@(AuthService.CurrentUser?.LocalId ?? "user-id")
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b; background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.25); color: #fbbf24; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 700; text-transform: uppercase;">
+                Active & Listening
+            </span>
+        </div>
+
+        <div>
+            <h5 style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; margin: 0 0 0.5rem 0; letter-spacing: 0.05em;">CURL Integration Example</h5>
+            <div class="code-block">curl -X POST "@(Navigation.BaseUri)api/leads/website-form/@(AuthService.CurrentUser?.LocalId ?? "user-id")" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice Green", "email": "alice@@greenlabs.com", "message": "Hi, we need scaling consulting."}'</div>
+        </div>
+    </div>
+
+    <!-- Live Integration Split Grid -->
+    <div class="grid-layout">
+        <!-- Left Pane: Interactive Live Test Form -->
+        <div class="glass-panel" style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <h3 style="margin-top: 0; color: #fcd34d; font-weight: 700; font-size: 1.2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 0.5rem;">
+                🧪 Live Endpoint Integration Form
+            </h3>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-top: -0.5rem; margin-bottom: 0.5rem;">
+                Submit details below. This form makes a real network request using HTTP POST to our API endpoint, triggering the Website Form Agent in real-time.
+            </p>
+
+            <div>
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; margin-bottom: 0.35rem;">Contact Name</label>
+                <input type="text" @bind="FormName" class="custom-input" placeholder="e.g. John Doe" />
+            </div>
+
+            <div>
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; margin-bottom: 0.35rem;">Email Address</label>
+                <input type="email" @bind="FormEmail" class="custom-input" placeholder="e.g. john@@example.com" />
+            </div>
+
+            <div>
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; margin-bottom: 0.35rem;">Message Inquiry</label>
+                <textarea @bind="FormMessage" class="custom-input" style="height: 100px; resize: vertical;" placeholder="Type inquiry here..."></textarea>
+            </div>
+
+            @if (!string.IsNullOrEmpty(SubmitStatusMessage))
+            {
+                <div style="font-size: 0.85rem; color: #fbbf24; text-align: center;">
+                    @SubmitStatusMessage
+                </div>
+            }
+
+            <button class="btn-action" style="width: 100%; color: #0f172a; font-weight: 700; text-shadow: none;" @onclick="SubmitApiForm" disabled="@(IsSubmitting || string.IsNullOrWhiteSpace(FormName) || string.IsNullOrWhiteSpace(FormMessage))">
+                @if (IsSubmitting)
+                {
+                    <span>POSTing payload...</span>
+                }
+                else
+                {
+                    <span>POST to API Endpoint 🚀</span>
+                }
+            </button>
+        </div>
+
+        <!-- Right Pane: Submission Review -->
+        <div class="glass-panel" style="display: flex; flex-direction: column; gap: 1.25rem; height: 100%; min-height: 500px;">
+            <h3 style="margin-top: 0; color: #f1f5f9; font-weight: 700; font-size: 1.2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <span>Submissions Queue</span>
+                <span style="font-size: 0.85rem; font-family: 'JetBrains Mono', monospace; color: #fbbf24;">@FormMessages.Count submissions</span>
+            </h3>
+
+            <!-- Queue List -->
+            <div class="inbox-list">
+                @if (!FormMessages.Any())
+                {
+                    <div style="text-align: center; color: #64748b; font-style: italic; padding-top: 3rem;">
+                        No submissions received yet.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var msg in FormMessages)
+                    {
+                        <div class="inbox-card @(SelectedMessage?.Id == msg.Id ? "active" : "")" @onclick="() => SelectMessage(msg)">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                                <span style="font-weight: 700; color: #f1f5f9; font-size: 0.9rem;">@msg.LeadName</span>
+                                <span style="font-size: 0.7rem; color: #64748b;">@msg.ReceivedAt.ToLocalTime().ToString("t")</span>
+                            </div>
+                            <div style="font-size: 0.75rem; color: #fbbf24; margin-bottom: 0.4rem;">
+                                @msg.ContactInfo
+                            </div>
+                            <div style="font-size: 0.8rem; color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @msg.MessageBody
+                            </div>
+                            <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.68rem; color: #64748b;">Status:</span>
+                                <span class="badge-status @(msg.Status == "Approved & Sent" ? "status-sent" : "status-pending")" style="font-size: 0.6rem; padding: 0.15rem 0.4rem;">
+                                    @(msg.Status == "Approved & Sent" ? "📬 Sent" : "⏳ Review")
+                                </span>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- Editor / Approvals panel -->
+            @if (SelectedMessage != null)
+            {
+                <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.25rem; display: flex; flex-direction: column; gap: 1rem; flex: 1; overflow-y: auto;">
+                    <div style="font-size: 0.8rem; color: #94a3b8;">
+                        <strong>Selected Lead inquiry:</strong> "@SelectedMessage.MessageBody"
+                    </div>
+
+                    <!-- Editor -->
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; margin-bottom: 0.35rem;">Draft Response</label>
+                        @if (SelectedMessage.Status == "Pending Review")
+                        {
+                            <textarea @bind="EditedResponse" class="custom-input" style="height: 110px; resize: vertical;" placeholder="Compose reply..."></textarea>
+                        }
+                        else
+                        {
+                            <div style="background: rgba(16, 185, 129, 0.05); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2); line-height: 1.4; color: #34d399; font-size: 0.85rem; white-space: pre-wrap;">
+                                @SelectedMessage.DraftResponse
+                            </div>
+                        }
+                    </div>
+
+                    @if (SelectedMessage.Status == "Pending Review")
+                    {
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button class="btn-action" style="padding: 0.5rem 1rem; font-size: 0.85rem; color: #0f172a;" @onclick="ApproveAndSend" disabled="IsProcessing">
+                                Approve & Send response
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<LeadMessage> FormMessages { get; set; } = new();
+    private LeadMessage? SelectedMessage { get; set; }
+    private string EditedResponse { get; set; } = string.Empty;
+    private bool IsProcessing { get; set; } = false;
+
+    // Test form fields
+    private string FormName { get; set; } = string.Empty;
+    private string FormEmail { get; set; } = string.Empty;
+    private string FormMessage { get; set; } = string.Empty;
+    private bool IsSubmitting { get; set; } = false;
+    private string SubmitStatusMessage { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFormMessages();
+    }
+
+    private async Task LoadFormMessages()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId != null)
+        {
+            var allMessages = await LeadsService.GetLeadMessagesAsync(userId);
+            FormMessages = allMessages.Where(m => m.Channel == "Website Form").ToList();
+
+            if (SelectedMessage != null)
+            {
+                SelectedMessage = FormMessages.FirstOrDefault(m => m.Id == SelectedMessage.Id);
+                if (SelectedMessage != null && SelectedMessage.Status == "Approved & Sent")
+                {
+                    EditedResponse = SelectedMessage.DraftResponse;
+                }
+            }
+        }
+    }
+
+    private void SelectMessage(LeadMessage msg)
+    {
+        SelectedMessage = msg;
+        EditedResponse = msg.DraftResponse;
+    }
+
+    private async Task ApproveAndSend()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null || SelectedMessage == null) return;
+
+        IsProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            await LeadsOrchestrator.SendApprovedResponseAsync(userId, SelectedMessage, EditedResponse);
+            await LoadFormMessages();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to approve form response: {ex.Message}");
+        }
+        finally
+        {
+            IsProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitApiForm()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null) return;
+
+        IsSubmitting = true;
+        SubmitStatusMessage = "Ingesting payload...";
+        StateHasChanged();
+
+        try
+        {
+            var payload = new
+            {
+                name = FormName,
+                email = FormEmail,
+                message = FormMessage
+            };
+
+            var json = JsonSerializer.Serialize(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var endpoint = $"{Navigation.BaseUri}api/leads/website-form/{userId}";
+            
+            var response = await Http.PostAsync(endpoint, content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                SubmitStatusMessage = "Form posted successfully! Database synchronizing...";
+                FormName = string.Empty;
+                FormEmail = string.Empty;
+                FormMessage = string.Empty;
+                
+                await Task.Delay(1000);
+                await LoadFormMessages();
+                SubmitStatusMessage = "Submissions updated!";
+            }
+            else
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                SubmitStatusMessage = $"Submission failed: {response.StatusCode} - {responseContent}";
+            }
+        }
+        catch (Exception ex)
+        {
+            SubmitStatusMessage = $"Network request error: {ex.Message}";
+        }
+        finally
+        {
+            IsSubmitting = false;
+            StateHasChanged();
+            await Task.Delay(3000);
+            SubmitStatusMessage = string.Empty;
+            StateHasChanged();
+        }
+    }
+}

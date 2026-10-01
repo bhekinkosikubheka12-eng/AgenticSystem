@@ -1,0 +1,409 @@
+@page "/leads-center/email"
+@using AgenticSystem.Data
+@using AgenticSystem.Services
+@inject FirebaseAuthService AuthService
+@inject FirebaseLeadsService LeadsService
+@inject LeadsCenterOrchestrator LeadsOrchestrator
+@inject NavigationManager Navigation
+
+<PageTitle>Email Agent - Agentic OS</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    .email-container {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090b16 60%, #02040a 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+        padding: 2.5rem;
+    }
+
+    .glass-panel {
+        background: rgba(30, 41, 59, 0.45);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(56, 189, 248, 0.15); /* Sky blue accent for email */
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        padding: 1.5rem;
+    }
+
+    .split-layout {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 1.5rem;
+        height: calc(100vh - 180px);
+        min-height: 500px;
+    }
+
+    @@media (max-width: 900px) {
+        .split-layout {
+            grid-template-columns: 1fr;
+            height: auto;
+        }
+    }
+
+    .email-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        overflow-y: auto;
+        padding-right: 0.25rem;
+    }
+
+    .email-card {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: left;
+    }
+
+    .email-card:hover {
+        border-color: rgba(56, 189, 248, 0.3);
+        background: rgba(15, 23, 42, 0.6);
+    }
+
+    .email-card.active {
+        border-color: #38bdf8;
+        background: rgba(56, 189, 248, 0.08);
+    }
+
+    .email-detail {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        overflow-y: auto;
+    }
+
+    .code-block {
+        font-family: 'JetBrains Mono', monospace;
+        background: #020617;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 0.85rem;
+        border-radius: 8px;
+        color: #94a3b8;
+        font-size: 0.8rem;
+        white-space: pre-wrap;
+    }
+
+    .custom-input {
+        width: 100%;
+        padding: 0.85rem 1.1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.6);
+        color: white;
+        font-size: 0.95rem;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+
+    .custom-input:focus {
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+    }
+
+    .btn-action {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+    }
+
+    .btn-action:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
+        background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+    }
+
+    .btn-action:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .mobile-only-btn {
+        display: none;
+    }
+
+    @@media (max-width: 768px) {
+        .mobile-only-btn {
+            display: inline-flex !important;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .split-layout.has-selected .email-list {
+            display: none !important;
+        }
+        .split-layout:not(.has-selected) .email-detail {
+            display: none !important;
+        }
+        .split-layout {
+            grid-template-columns: 1fr;
+            height: auto;
+            min-height: auto;
+        }
+        .email-container {
+            padding: 1.25rem;
+        }
+    }
+</style>
+
+<div class="email-container">
+    <!-- Header -->
+    <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 1.5rem; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="margin: 0; font-size: 2.3rem; font-weight: 800; background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">📧 Email Worker Agent</h1>
+            <p style="color: #94a3b8; margin: 0.25rem 0 0 0; font-size: 1rem;">Inspects business email queues, analyzes inquiries, and drafts professional templates</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <button class="btn-action" style="background: linear-gradient(135deg, #0ea5e9 0%, #025a90 100%); border: none; color: white; display: flex; align-items: center; gap: 0.5rem;" @onclick='() => Navigation.NavigateTo("/leads-center/email/inbox")'>
+                📥 Open Inbox
+            </button>
+            <button class="btn-action" style="background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); border: none; color: white; display: flex; align-items: center; gap: 0.5rem;" @onclick='() => Navigation.NavigateTo("/leads-center/email/config")'>
+                ⚙️ Configure Access
+            </button>
+            <button class="btn-action" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); color: #cbd5e1; box-shadow: none;" @onclick='() => Navigation.NavigateTo("/leads-center")'>
+                Back to Leads Center
+            </button>
+        </div>
+    </header>
+
+    @if (!IsEmailConfigured)
+    {
+        <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 1.25rem 1.5rem; border-radius: 12px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.08);">
+            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <span style="font-size: 1.5rem;">⚠️</span>
+                <div>
+                    <strong style="color: #fca5a5; display: block; margin-bottom: 0.15rem;">Email Config Required</strong>
+                    <span style="font-size: 0.9rem; color: #fecdd3;">Outbound email replies are disabled until your SMTP credentials are configured.</span>
+                </div>
+            </div>
+            <button class="btn-action" style="background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); border: none; color: white; padding: 0.5rem 1.25rem; font-size: 0.85rem;" @onclick='() => Navigation.NavigateTo("/leads-center/email/config")'>
+                Configure Access
+            </button>
+        </div>
+    }
+
+    <div class="split-layout @(SelectedMessage != null ? "has-selected" : "")">
+        <!-- Left Pane: Lead Emails List -->
+        <div class="glass-panel email-list">
+            <h3 style="margin-top: 0; color: #f1f5f9; font-size: 1.1rem; font-weight: 700; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 0.5rem; display: flex; justify-content: space-between;">
+                <span>Email Queue</span>
+                <span style="color: #38bdf8; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;">@EmailMessages.Count items</span>
+            </h3>
+
+            @if (!EmailMessages.Any())
+            {
+                <div style="text-align: center; color: #64748b; font-style: italic; padding-top: 4rem;">
+                    No emails in queue.
+                </div>
+            }
+            else
+            {
+                @foreach (var msg in EmailMessages)
+                {
+                    <div class="email-card @(SelectedMessage?.Id == msg.Id ? "active" : "")" @onclick="() => SelectMessage(msg)">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                            <span style="font-weight: 700; color: #f1f5f9; font-size: 0.9rem;">@msg.LeadName</span>
+                            <span style="font-size: 0.7rem; color: #64748b;">@msg.ReceivedAt.ToLocalTime().ToString("t")</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #38bdf8; margin-bottom: 0.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            @msg.ContactInfo
+                        </div>
+                        <div style="font-size: 0.8rem; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            @msg.MessageBody
+                        </div>
+                        <div style="margin-top: 0.5rem; display: flex; justify-content: flex-end;">
+                            <span class="badge-status @(msg.Status == "Approved & Sent" ? "status-sent" : "status-pending")" style="font-size: 0.6rem; padding: 0.15rem 0.4rem;">
+                                @(msg.Status == "Approved & Sent" ? "📬 Sent" : "⏳ Review")
+                            </span>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        <!-- Right Pane: Email Detailed View / Approvals -->
+        <div class="glass-panel email-detail">
+            @if (SelectedMessage == null)
+            {
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #64748b;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📧</div>
+                    <p style="margin: 0; font-style: italic;">Select an email from the queue list to inspect and process.</p>
+                </div>
+            }
+            else
+            {
+                <button class="btn-secondary-custom mobile-only-btn" style="margin-bottom: 1rem; border-color: rgba(56, 189, 248, 0.25); color: #38bdf8;" @onclick="() => SelectedMessage = null">
+                    ← Back to Email Queue
+                </button>
+
+                <!-- Header Details -->
+                <div style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 1rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h2 style="margin: 0 0 0.25rem 0; font-size: 1.4rem; color: #f1f5f9;">@SelectedMessage.LeadName</h2>
+                        <span style="color: #38bdf8; font-size: 0.9rem;">From: @SelectedMessage.ContactInfo</span>
+                    </div>
+                    <div>
+                        <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem; text-align: right;">
+                            Received: @SelectedMessage.ReceivedAt.ToLocalTime().ToString("g")
+                        </div>
+                        <span class="badge-status @(SelectedMessage.Status == "Approved & Sent" ? "status-sent" : "status-pending")">
+                            @(SelectedMessage.Status == "Approved & Sent" ? "📬 Approved & Sent" : "⏳ Awaiting Review")
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Inquiry Content -->
+                <div>
+                    <h4 style="margin: 0 0 0.5rem 0; color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Inbound Email Message</h4>
+                    <div style="background: rgba(15, 23, 42, 0.5); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.02); line-height: 1.5; color: #cbd5e1;">
+                        @SelectedMessage.MessageBody
+                    </div>
+                </div>
+
+                <!-- Agent Reasoning / Ledger -->
+                <div>
+                    <h4 style="margin: 0 0 0.5rem 0; color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Agent Execution Logs</h4>
+                    <div class="code-block">@SelectedMessage.AgentLogs</div>
+                </div>
+
+                <!-- Draft Reply Section -->
+                <div>
+                    <h4 style="margin: 0 0 0.5rem 0; color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Draft Reply Composition</h4>
+                    @if (SelectedMessage.Status == "Pending Review")
+                    {
+                        <textarea @bind="EditedResponse" class="custom-input" style="height: 180px; resize: vertical; font-family: sans-serif; line-height: 1.5; font-size: 0.95rem;" placeholder="Refining draft..."></textarea>
+                    }
+                    else
+                    {
+                        <div style="background: rgba(16, 185, 129, 0.05); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2); line-height: 1.5; color: #34d399; white-space: pre-wrap;">
+                            @SelectedMessage.DraftResponse
+                        </div>
+                    }
+                </div>
+
+                <!-- Actions -->
+                @if (SelectedMessage.Status == "Pending Review")
+                {
+                    <div style="display: flex; gap: 1rem; margin-top: 0.5rem; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+                        @if (!IsEmailConfigured)
+                        {
+                            <span style="color: #f87171; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
+                                ⚠️ Configure access to send this email
+                            </span>
+                        }
+                        <button class="btn-action" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);" @onclick="ApproveAndSend" disabled="@(IsProcessing || !IsEmailConfigured)">
+                            @if (IsProcessing)
+                            {
+                                <span>Delivering...</span>
+                            }
+                            else
+                            {
+                                <span>Approve & Send Email</span>
+                            }
+                        </button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<LeadMessage> EmailMessages { get; set; } = new();
+    private LeadMessage? SelectedMessage { get; set; }
+    private string EditedResponse { get; set; } = string.Empty;
+    private bool IsProcessing { get; set; } = false;
+    private bool IsEmailConfigured { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEmailMessages();
+        await LoadEmailConfig();
+    }
+
+    private async Task LoadEmailConfig()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId != null)
+        {
+            var config = await LeadsService.GetEmailConfigAsync(userId);
+            IsEmailConfigured = config != null && 
+                                !string.IsNullOrEmpty(config.Username) && 
+                                !string.IsNullOrEmpty(config.IncomingServer) && 
+                                !string.IsNullOrEmpty(config.EncryptedPassword);
+        }
+    }
+
+    private async Task LoadEmailMessages()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId != null)
+        {
+            var allMessages = await LeadsService.GetLeadMessagesAsync(userId);
+            EmailMessages = allMessages.Where(m => m.Channel == "Email").ToList();
+            
+            // Re-select currently active message if available to pick up state updates
+            if (SelectedMessage != null)
+            {
+                SelectedMessage = EmailMessages.FirstOrDefault(m => m.Id == SelectedMessage.Id);
+                if (SelectedMessage != null && SelectedMessage.Status == "Approved & Sent")
+                {
+                    EditedResponse = SelectedMessage.DraftResponse;
+                }
+            }
+        }
+    }
+
+    private void SelectMessage(LeadMessage msg)
+    {
+        SelectedMessage = msg;
+        EditedResponse = msg.DraftResponse;
+    }
+
+    private async Task ApproveAndSend()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null || SelectedMessage == null || !IsEmailConfigured) return;
+
+        IsProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            await LeadsOrchestrator.SendApprovedResponseAsync(userId, SelectedMessage, EditedResponse);
+            await LoadEmailMessages();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to approve email reply: {ex.Message}");
+        }
+        finally
+        {
+            IsProcessing = false;
+            StateHasChanged();
+        }
+    }
+}

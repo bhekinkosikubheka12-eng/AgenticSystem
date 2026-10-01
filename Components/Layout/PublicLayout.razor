@@ -1,0 +1,197 @@
+@inherits LayoutComponentBase
+
+<div class="public-layout-container">
+    <header class="public-header">
+        <div class="header-container">
+            <a href="/" class="brand">
+                <span class="brand-emoji">🤖</span>
+                <span class="brand-text">Humanic<span class="brand-accent">Bot</span></span>
+            </a>
+            <nav class="public-nav">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/privacy" class="nav-link">Privacy</a>
+                <a href="/dashboard" class="nav-link btn-portal">Launch App</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="public-content">
+        @Body
+    </main>
+
+    <footer class="public-footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <span class="brand-emoji">🤖</span> HumanicBot &mdash; Local Agentic Intelligence
+            </div>
+            <div class="footer-links">
+                <a href="/">Home</a>
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/dashboard">Application Login</a>
+            </div>
+            <div class="footer-copy">
+                &copy; @DateTime.Now.Year HumanicBot. All rights reserved.
+            </div>
+        </div>
+    </footer>
+</div>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+    .public-layout-container {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f172a 50%, #020617 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .public-header {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 1rem 2rem;
+    }
+
+    .header-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        color: #fff;
+        font-size: 1.5rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+    }
+
+    .brand-emoji {
+        font-size: 1.75rem;
+    }
+
+    .brand-text {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    }
+
+    .brand-accent {
+        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .public-nav {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+    }
+
+    .public-nav .nav-link {
+        color: #94a3b8;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.95rem;
+        transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    .public-nav .nav-link:hover {
+        color: #f8fafc;
+    }
+
+    .public-nav .btn-portal {
+        background: rgba(56, 189, 248, 0.1);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        color: #38bdf8 !important;
+        padding: 0.5rem 1.25rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.1);
+    }
+
+    .public-nav .btn-portal:hover {
+        background: rgba(56, 189, 248, 0.2);
+        border-color: #38bdf8;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(56, 189, 248, 0.2);
+    }
+
+    .public-content {
+        flex: 1;
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 3rem 2rem;
+    }
+
+    .public-footer {
+        background: #020617;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 3rem 2rem;
+        color: #64748b;
+    }
+
+    .footer-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .footer-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+
+    .footer-links {
+        display: flex;
+        gap: 2rem;
+    }
+
+    .footer-links a {
+        color: #475569;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s ease;
+    }
+
+    .footer-links a:hover {
+        color: #94a3b8;
+    }
+
+    .footer-copy {
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+    }
+
+    @@media (max-width: 768px) {
+        .header-container {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .public-nav {
+            gap: 1.25rem;
+        }
+
+        .public-content {
+            padding: 2rem 1.25rem;
+        }
+    }
+</style>

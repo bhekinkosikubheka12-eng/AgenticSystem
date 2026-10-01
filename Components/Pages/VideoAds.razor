@@ -1,0 +1,440 @@
+@page "/video-ads"
+@using AgenticSystem.Data
+@using AgenticSystem.Services
+@inject FirebaseAuthService AuthService
+@inject FirebaseSearchSocialService SearchSocialService
+@inject VideoAdGeneratorService VideoAdAgent
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Video Campaigns - Agentic OS</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    .dashboard-container {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f172a 50%, #020617 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+        padding: 2.5rem;
+    }
+
+    .glass-panel {
+        background: rgba(30, 41, 59, 0.45);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.3);
+        padding: 2rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .glass-panel:hover {
+        box-shadow: 0 15px 35px 0 rgba(0, 0, 0, 0.4);
+    }
+
+    .gradient-text {
+        background: linear-gradient(135deg, #a78bfa 0%, #c084fc 50%, #ec4899 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .badge-info-custom {
+        background: rgba(167, 139, 250, 0.15);
+        border: 1px solid rgba(167, 139, 250, 0.3);
+        color: #c084fc;
+    }
+
+    .pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .pulse-purple {
+        background-color: #a78bfa;
+        box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.7);
+        animation: pulsePurple 2s infinite;
+    }
+
+    @@keyframes pulsePurple {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(167, 139, 250, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); }
+    }
+
+    .btn-action {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    }
+
+    .btn-action:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    }
+
+    .btn-action:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .video-sidebar-item {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 1.25rem;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .video-sidebar-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.12);
+        transform: translateY(-1px);
+    }
+
+    .video-sidebar-item.active {
+        background: rgba(167, 139, 250, 0.08);
+        border-color: rgba(167, 139, 250, 0.35);
+        box-shadow: 0 4px 15px rgba(167, 139, 250, 0.1);
+    }
+
+    /* Scene storyboard card style */
+    .scene-card {
+        background: rgba(15, 23, 42, 0.45);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        position: relative;
+    }
+
+    .scene-number {
+        position: absolute;
+        top: -12px;
+        left: 1.5rem;
+        background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+        color: white;
+        padding: 0.2rem 0.8rem;
+        border-radius: 9999px;
+        font-weight: 700;
+        font-size: 0.8rem;
+        box-shadow: 0 4px 8px rgba(124, 58, 237, 0.3);
+    }
+
+    .scene-detail-label {
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        color: #a78bfa;
+        letter-spacing: 0.05em;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .scene-detail-val {
+        color: #cbd5e1;
+        font-size: 0.92rem;
+        line-height: 1.5;
+    }
+
+    .campaign-grid {
+        display: grid;
+        grid-template-columns: 1fr 2.5fr;
+        gap: 2rem;
+    }
+
+    @@media (max-width: 992px) {
+        .campaign-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="dashboard-container">
+    <!-- Header -->
+    <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 1.5rem; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1.5rem;">
+        <div>
+            <h1 class="gradient-text" style="margin: 0; font-size: 2.5rem;">Video Ad Storyboards</h1>
+            <p style="color: #94a3b8; margin: 0.25rem 0 0 0; font-size: 1.1rem;">AI-orchestrated ad campaign concepts, video scripts, and scene visual cues</p>
+        </div>
+        
+        <div class="badge-status badge-info-custom">
+            <span class="pulse-dot pulse-purple"></span>
+            Agent: Video Director
+        </div>
+    </header>
+
+    @if (IsGenerating)
+    {
+        <div class="glass-panel" style="text-align: center; padding: 6rem 2rem; margin-bottom: 2rem;">
+            <div class="spinner-border text-primary" role="status" style="width: 4.5rem; height: 4.5rem; border-width: 0.35em; color: #a78bfa !important;"></div>
+            <h3 style="margin-top: 2rem; color: #a78bfa; font-weight: 700; font-size: 1.5rem;">Orchestrating Video Board Blueprint</h3>
+            <p style="color: #cbd5e1; max-width: 550px; margin: 0.75rem auto 0 auto; line-height: 1.6;">
+                The Video Ad Agent is reviewing the target social copy, aligning visual scene cues, drafting professional voiceover voice notes, and scripting music tempo guidelines...
+            </p>
+        </div>
+    }
+
+    <div class="campaign-grid">
+        <!-- Sidebar - List of Campaigns -->
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
+                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #e2e8f0; display: flex; align-items: center; gap: 0.5rem;">
+                    📂 Video Campaigns
+                </h3>
+
+                @if (VideoAdsList == null)
+                {
+                    <div style="text-align: center; padding: 2rem 0;">
+                        <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.75rem;">Loading scripts...</p>
+                    </div>
+                }
+                else if (!VideoAdsList.Any())
+                {
+                    <div style="text-align: center; padding: 2rem 1rem; background: rgba(0,0,0,0.15); border-radius: 12px; border: 1px solid rgba(255,255,255,0.03);">
+                        <div style="font-size: 2.25rem; margin-bottom: 0.5rem;">🎬</div>
+                        <h4 style="color: #cbd5e1; margin-bottom: 0.25rem; font-size: 0.95rem;">No Active Storyboards</h4>
+                        <p style="color: #64748b; font-size: 0.8rem; line-height: 1.4; margin: 0;">
+                            Create visual script concepts from your social posts first.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div style="display: flex; flex-direction: column; gap: 0.85rem; max-height: 500px; overflow-y: auto; padding-right: 0.25rem;">
+                        @foreach (var ad in VideoAdsList)
+                        {
+                            var currentAd = ad;
+                            <div class="video-sidebar-item @(SelectedAd?.Id == currentAd.Id ? "active" : "")"
+                                 @onclick="() => SelectedAd = currentAd">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                                    <strong style="color: #f1f5f9; font-size: 0.95rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 170px;">
+                                        @currentAd.Title
+                                    </strong>
+                                    <span style="font-size: 0.75rem; background: rgba(255,255,255,0.08); padding: 0.15rem 0.45rem; border-radius: 4px; color: #a78bfa; font-weight: 600;">
+                                        @currentAd.Platform
+                                    </span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace;">
+                                    <span>@currentAd.EstimatedDuration</span>
+                                    <span>@currentAd.CreatedAt.ToLocalTime().ToString("MM/dd HH:mm")</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Context Link card -->
+            <div class="glass-panel" style="padding: 1.5rem; background: rgba(167, 139, 250, 0.02); border-color: rgba(167, 139, 250, 0.12); display: flex; flex-direction: column; gap: 0.85rem;">
+                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #c084fc;">💡 Pro-Tip</h4>
+                <p style="color: #94a3b8; font-size: 0.8rem; line-height: 1.5; margin: 0;">
+                    Navigate back to the <a href="social-media-posts" style="color: #a78bfa; text-decoration: underline;">Social Advisor</a> to pick any text post and map it into a professional video ad blueprint campaign.
+                </p>
+            </div>
+        </div>
+
+        <!-- Main Workspace - Detail Board -->
+        <div>
+            @if (SelectedAd == null)
+            {
+                <div class="glass-panel" style="text-align: center; padding: 6rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+                    <div style="font-size: 4rem; margin-bottom: 1.5rem;">🎞️</div>
+                    <h3 style="color: #cbd5e1; font-weight: 700;">Select Campaign to View Storyboard</h3>
+                    <p style="color: #64748b; max-width: 420px; margin: 0.5rem auto 0 auto; line-height: 1.5; font-size: 0.95rem;">
+                        Pick a generated script campaign from the left sidebar to analyze scene sequences, visuals, and audio scripting directives.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="glass-panel" style="display: flex; flex-direction: column; gap: 2rem;">
+                    <!-- Detail Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+                                <h2 style="margin: 0; font-weight: 800; font-size: 1.6rem; color: #f8fafc;">@SelectedAd.Title</h2>
+                                <span style="font-size: 0.8rem; background: rgba(167, 139, 250, 0.15); border: 1px solid rgba(167, 139, 250, 0.3); color: #c084fc; padding: 0.2rem 0.6rem; border-radius: 9999px; font-weight: 600;">
+                                    @SelectedAd.Platform Ad
+                                </span>
+                            </div>
+                            <p style="color: #94a3b8; font-size: 0.95rem; margin: 0; line-height: 1.5;">
+                                <strong style="color: #cbd5e1;">Hook Idea:</strong> @SelectedAd.CoreMessage
+                            </p>
+                        </div>
+
+                        <div style="display: flex; gap: 0.75rem; align-items: center;">
+                            <div style="text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #64748b; display: flex; flex-direction: column;">
+                                <span>Duration: @SelectedAd.EstimatedDuration</span>
+                                <span>Created: @SelectedAd.CreatedAt.ToLocalTime().ToString("g")</span>
+                            </div>
+                            <button type="button" class="btn-action" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);" @onclick="() => DeleteCampaign(SelectedAd.Id)">
+                                Delete Script
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Scenes storyboard sequence -->
+                    <div style="display: flex; flex-direction: column; gap: 1.75rem;">
+                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #e2e8f0;">🎬 Storyboard Scenes</h3>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 2rem;">
+                            @foreach (var scene in SelectedAd.Scenes.OrderBy(s => s.SceneNumber))
+                            {
+                                <div class="scene-card">
+                                    <div class="scene-number">Scene #@scene.SceneNumber</div>
+
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-top: 0.5rem;">
+                                        <div>
+                                            <span class="scene-detail-label">🖼️ Visual Content / Storyboard</span>
+                                            <p class="scene-detail-val">@scene.VisualDescription</p>
+                                        </div>
+                                        <div>
+                                            <span class="scene-detail-label">🎙️ Audio / Voiceover transcript</span>
+                                            <p class="scene-detail-val">@scene.AudioVoiceover</p>
+                                        </div>
+                                        <div>
+                                            <span class="scene-detail-label">🎵 Sound & Music cues</span>
+                                            <p class="scene-detail-val">@scene.MusicInstructions</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    public UserBusinessProfile? UserProfile { get; set; }
+
+    private List<VideoAdDetail>? VideoAdsList { get; set; }
+    private VideoAdDetail? SelectedAd { get; set; }
+    private bool IsGenerating { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCampaignData();
+
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("platform", out var platformVal) && 
+            query.TryGetValue("content", out var contentVal) && 
+            query.TryGetValue("guidance", out var guidanceVal))
+        {
+            var platform = platformVal.ToString();
+            var content = contentVal.ToString();
+            var guidance = guidanceVal.ToString();
+
+            Navigation.NavigateTo("/video-ads", replace: true);
+
+            await TriggerImmediateGeneration(platform, content, guidance);
+        }
+    }
+
+    private async Task LoadCampaignData()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId != null)
+        {
+            VideoAdsList = await SearchSocialService.GetVideoAdsAsync(userId);
+            if (SelectedAd != null)
+            {
+                SelectedAd = VideoAdsList.FirstOrDefault(v => v.Id == SelectedAd.Id) ?? VideoAdsList.FirstOrDefault();
+            }
+            else
+            {
+                SelectedAd = VideoAdsList.FirstOrDefault();
+            }
+        }
+    }
+
+    private async Task TriggerImmediateGeneration(string platform, string content, string guidance)
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null || UserProfile == null) return;
+
+        IsGenerating = true;
+        StateHasChanged();
+
+        try
+        {
+            var generatedAd = await VideoAdAgent.GenerateVideoAdAsync(
+                userId, 
+                UserProfile, 
+                platform, 
+                content, 
+                guidance
+            );
+
+            await LoadCampaignData();
+            SelectedAd = VideoAdsList?.FirstOrDefault(v => v.Id == generatedAd.Id) ?? generatedAd;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to execute immediate ad generation: {ex.Message}");
+        }
+        finally
+        {
+            IsGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteCampaign(string id)
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null) return;
+
+        try
+        {
+            bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this video ad script campaign?");
+            if (confirm)
+            {
+                await SearchSocialService.DeleteVideoAdAsync(userId, id);
+                await LoadCampaignData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to delete campaign: {ex.Message}");
+        }
+    }
+}

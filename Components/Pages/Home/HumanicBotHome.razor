@@ -1,0 +1,812 @@
+@page "/"
+@layout PublicLayout
+@namespace AgenticSystem.Components.Pages
+
+<PageTitle>HumanicBot &mdash; Local Agentic Intelligence</PageTitle>
+
+<div class="landing-hero">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+        <div class="hero-badge">INTELLIGENT BUSINESS ORCHESTRATION</div>
+        <h1 class="hero-title">Meet the <span class="gradient-text">Business Automation System</span></h1>
+        <p class="hero-lead">
+            The next-generation autonomous platform designed to streamline operations, automate tasks,
+            and orchestrate business processes with secure, local agentic intelligence.
+        </p>
+        <div class="hero-actions">
+            <a href="/dashboard" class="btn-primary-glow">Get System App</a>
+            <a href="#explain" class="btn-secondary-link">How it works &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<div class="section-container" id="explain">
+    <div class="section-header">
+        <span class="section-tag">Capabilities</span>
+        <h2>Why HumanicBot?</h2>
+        <p class="section-desc">A secure, localized agent architecture that puts control back in your hands.</p>
+    </div>
+
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <h3>100% Data Sovereignty</h3>
+            <p>Every token is processed locally. Chat logs, embeddings, and vector databases never leave your hard drive. No external API queries, no tracking, no subscription fees.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">🧠</div>
+            <h3>Cognitive Agent Memory</h3>
+            <p>Powered by local semantic memory stores. HumanicBot builds context-rich indexing of your local documents, source code, and knowledge bases to provide hyper-relevant advice.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Autonomous Executions</h3>
+            <p>Deploy agents to run multi-step workflows, edit local files safely, perform diagnostics, and orchestrate tools on your system with interactive validation guards.</p>
+        </div>
+    </div>
+</div>
+
+<div class="section-container bg-subtle">
+    <div class="section-header">
+        <span class="section-tag">Interactive Preview</span>
+        <h2>See HumanicBot in Action</h2>
+        <p class="section-desc">Test real-time planning, thought generation, and tool usage inside this browser simulator.</p>
+    </div>
+
+    <div class="simulator-wrapper">
+        <div class="simulator-window">
+            <div class="simulator-header">
+                <div class="window-dot red"></div>
+                <div class="window-dot yellow"></div>
+                <div class="window-dot green"></div>
+                <div class="window-title">humanicbot@@local-agent: ~</div>
+            </div>
+            
+            <div class="simulator-body">
+                <div class="sim-sidebar">
+                    <div class="sim-sidebar-title">DEMO OBJECTIVES</div>
+                    <button class="sim-objective-btn @(ActiveObjective == 1 ? "active" : "")" @onclick="() => SetObjective(1)">
+                        📊 File System Sync
+                    </button>
+                    <button class="sim-objective-btn @(ActiveObjective == 2 ? "active" : "")" @onclick="() => SetObjective(2)">
+                        🔒 Security Audit
+                    </button>
+                    <button class="sim-objective-btn @(ActiveObjective == 3 ? "active" : "")" @onclick="() => SetObjective(3)">
+                        📝 Report Synthesis
+                    </button>
+                </div>
+
+                <div class="sim-terminal">
+                    <div class="sim-log-scroll">
+                        <div class="sim-line system"><b>[SYSTEM]</b> Client established connection to Local-OS-Kernel v1.4.0</div>
+                        <div class="sim-line system"><b>[SYSTEM]</b> Volatile RAM vector index status: READY</div>
+                        <div class="sim-line user"><b>[USER]</b> @GetObjectivePrompt()</div>
+
+                        @foreach (var log in SimulatedLogs)
+                        {
+                            <div class="sim-log-entry @log.Type">
+                                <div class="sim-log-time">[@log.Timestamp]</div>
+                                <div class="sim-log-content">
+                                    <strong>@log.Title:</strong> @log.Message
+                                </div>
+                                @if (!string.IsNullOrEmpty(log.Details))
+                                {
+                                    <pre class="sim-details">@log.Details</pre>
+                                }
+                            </div>
+                        }
+
+                        @if (IsSimulating)
+                        {
+                            <div class="sim-typing">
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="sim-input-bar">
+                        <span class="sim-prompt">$</span>
+                        <input type="text" class="sim-input" readonly value="@GetObjectivePrompt()" />
+                        <button class="sim-btn-run" disabled="@IsSimulating" @onclick="RunSimulation">
+                            @if (IsSimulating) { <span>Running...</span> } else { <span>Execute</span> }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section-container" id="download">
+    <div class="download-card">
+        <div class="download-content">
+            <span class="download-badge">RELEASE LATEST v1.2.4</span>
+            <h2>Download HumanicBot Desktop</h2>
+            <p>Deploy your local-first agent in under 2 minutes. Standard installation includes a local embeddings engine and UI dashboard.</p>
+            <div class="download-meta">
+                <span>📦 Size: ~124 MB</span>
+                <span>🖥️ Platform: Windows 10/11 (x64), macOS 12+, Linux x64</span>
+            </div>
+            <!-- The download link triggers the download notification -->
+            <a href="/dashboard" class="btn-download" >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 0.5rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                 Offline App
+            </a>
+            @if (ShowDownloadMessage)
+            {
+                <div class="download-alert">
+                    🎉 Thank you for downloading! The setup file link is currently being configured. In production, this link downloads the standalone installer directly.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .landing-hero {
+        position: relative;
+        padding: 6rem 1rem 8rem 1rem;
+        text-align: center;
+        overflow: hidden;
+    }
+
+    .hero-glow {
+        position: absolute;
+        top: -10%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(56, 189, 248, 0.05) 50%, rgba(0, 0, 0, 0) 70%);
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 10;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .hero-badge {
+        display: inline-block;
+        padding: 0.35rem 1rem;
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        color: #a5b4fc;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        border-radius: 9999px;
+        margin-bottom: 2rem;
+    }
+
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        margin-bottom: 1.5rem;
+        line-height: 1.15;
+    }
+
+    .gradient-text {
+        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #ec4899 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .hero-lead {
+        font-size: 1.25rem;
+        color: #94a3b8;
+        line-height: 1.6;
+        margin-bottom: 2.5rem;
+    }
+
+    .hero-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .btn-primary-glow {
+        background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
+        color: #fff;
+        text-decoration: none;
+        padding: 0.85rem 2.25rem;
+        border-radius: 12px;
+        font-weight: 700;
+        box-shadow: 0 4px 20px rgba(56, 189, 248, 0.3);
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary-glow:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(56, 189, 248, 0.5);
+    }
+
+    .btn-secondary-link {
+        color: #94a3b8;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    .btn-secondary-link:hover {
+        color: #fff;
+        transform: translateX(3px);
+    }
+
+    .section-container {
+        padding: 5rem 1rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .bg-subtle {
+        background: rgba(30, 41, 59, 0.2);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        padding: 5rem 2rem;
+    }
+
+    .section-header {
+        text-align: center;
+        margin-bottom: 4rem;
+    }
+
+    .section-tag {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #38bdf8;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+
+    .section-header h2 {
+        font-size: 2.25rem;
+        font-weight: 800;
+        color: #f8fafc;
+        margin: 0.5rem 0 1rem 0;
+    }
+
+    .section-desc {
+        color: #64748b;
+        font-size: 1.1rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2.5rem;
+    }
+
+    .feature-card {
+        background: rgba(30, 41, 59, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 2.5rem 2rem;
+        transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-5px);
+        background: rgba(30, 41, 59, 0.45);
+        border-color: rgba(56, 189, 248, 0.2);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .feature-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .feature-card h3 {
+        color: #f1f5f9;
+        font-size: 1.35rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    .feature-card p {
+        color: #94a3b8;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
+    /* Simulator CSS */
+    .simulator-wrapper {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .simulator-window {
+        background: #090d16;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+
+    .simulator-header {
+        background: #0f172a;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .window-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+
+    .window-dot.red { background-color: #ef4444; }
+    .window-dot.yellow { background-color: #f59e0b; }
+    .window-dot.green { background-color: #10b981; }
+
+    .window-title {
+        flex: 1;
+        text-align: center;
+        font-family: monospace;
+        font-size: 0.75rem;
+        color: #475569;
+        margin-right: 48px; /* Offset the dots for centering */
+    }
+
+    .simulator-body {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        min-height: 400px;
+    }
+
+    .sim-sidebar {
+        background: #0b0f19;
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 1.25rem 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .sim-sidebar-title {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+        padding-left: 0.5rem;
+    }
+
+    .sim-objective-btn {
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        color: #64748b;
+        padding: 0.6rem 0.75rem;
+        text-align: left;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .sim-objective-btn:hover {
+        background: rgba(255, 255, 255, 0.03);
+        color: #cbd5e1;
+    }
+
+    .sim-objective-btn.active {
+        background: rgba(56, 189, 248, 0.08);
+        border-color: rgba(56, 189, 248, 0.2);
+        color: #38bdf8;
+    }
+
+    .sim-terminal {
+        display: flex;
+        flex-direction: column;
+        background: #020617;
+        font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+        font-size: 0.85rem;
+        padding: 1.5rem;
+        color: #cbd5e1;
+    }
+
+    .sim-log-scroll {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        min-height: 280px;
+        max-height: 350px;
+        padding-right: 0.5rem;
+    }
+
+    .sim-line {
+        line-height: 1.5;
+    }
+
+    .sim-line.system { color: #64748b; }
+    .sim-line.user { color: #38bdf8; }
+
+    .sim-log-entry {
+        border-left: 3px solid #64748b;
+        padding-left: 0.75rem;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .sim-log-entry.thought { border-color: #f59e0b; }
+    .sim-log-entry.tool { border-color: #818cf8; }
+    .sim-log-entry.output { border-color: #10b981; }
+
+    .sim-log-time {
+        font-size: 0.75rem;
+        color: #475569;
+        margin-bottom: 0.2rem;
+    }
+
+    .sim-log-content {
+        line-height: 1.4;
+    }
+
+    .sim-details {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+        color: #a7f3d0;
+        font-size: 0.75rem;
+        overflow-x: auto;
+        margin-top: 0.5rem;
+        white-space: pre-wrap;
+    }
+
+    .sim-typing {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.5rem 0;
+    }
+
+    .sim-typing .dot {
+        width: 6px;
+        height: 6px;
+        background: #38bdf8;
+        border-radius: 50%;
+        animation: blink 1.4s infinite both;
+    }
+
+    .sim-typing .dot:nth-child(2) { animation-delay: 0.2s; }
+    .sim-typing .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @@keyframes blink {
+        0% { opacity: 0.2; }
+        20% { opacity: 1; }
+        100% { opacity: 0.2; }
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(3px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .sim-input-bar {
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        padding-top: 1rem;
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .sim-prompt {
+        color: #38bdf8;
+        font-weight: 700;
+    }
+
+    .sim-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: #fff;
+        font-family: inherit;
+        font-size: inherit;
+        outline: none;
+    }
+
+    .sim-btn-run {
+        background: #38bdf8;
+        border: none;
+        color: #020617;
+        font-family: inherit;
+        font-weight: 700;
+        font-size: 0.8rem;
+        padding: 0.4rem 1.2rem;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .sim-btn-run:hover:not(:disabled) {
+        background: #0ea5e9;
+        transform: translateY(-1px);
+    }
+
+    .sim-btn-run:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Download Area CSS */
+    .download-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 24px;
+        padding: 4rem 2rem;
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .download-content {
+        position: relative;
+        z-index: 10;
+    }
+
+    .download-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        color: #34d399;
+        font-size: 0.7rem;
+        font-weight: 700;
+        border-radius: 9999px;
+        margin-bottom: 1.5rem;
+    }
+
+    .download-card h2 {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #f8fafc;
+        margin-bottom: 1rem;
+    }
+
+    .download-card p {
+        
+        font-size: 1.05rem;
+        line-height: 1.6;
+        max-width: 550px;
+        margin: 0 auto 2rem auto;
+    }
+
+    .download-meta {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        color: #475569;
+        font-size: 0.85rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-download {
+        display: inline-flex;
+        align-items: center;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #fff;
+        text-decoration: none;
+        padding: 0.95rem 2.5rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1.05rem;
+        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-download:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(16, 185, 129, 0.4);
+    }
+
+    .download-alert {
+        margin-top: 1.5rem;
+        padding: 0.75rem 1rem;
+        background: rgba(56, 189, 248, 0.1);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        color: #38bdf8;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        animation: fadeIn 0.3s ease;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    @@media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.5rem;
+        }
+
+        .bg-subtle {
+            padding: 3rem 1rem;
+        }
+
+        .simulator-body {
+            grid-template-columns: 1fr;
+        }
+
+        .sim-sidebar {
+            border-right: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            flex-direction: row;
+            overflow-x: auto;
+            padding: 0.75rem;
+        }
+
+        .sim-sidebar-title {
+            display: none;
+        }
+
+        .sim-objective-btn {
+            white-space: nowrap;
+        }
+    }
+</style>
+
+@code {
+    private int ActiveObjective { get; set; } = 1;
+    private bool IsSimulating { get; set; } = false;
+    private bool ShowDownloadMessage { get; set; } = false;
+    private List<SimulatedLogEntry> SimulatedLogs { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        ResetSimulatorLogs();
+    }
+
+    private void SetObjective(int id)
+    {
+        if (IsSimulating) return;
+        ActiveObjective = id;
+        ResetSimulatorLogs();
+    }
+
+    private string GetObjectivePrompt()
+    {
+        return ActiveObjective switch
+        {
+            1 => "Sync active user directory /documents to volatile database index.",
+            2 => "Perform code dependency security scan on local workspace folder.",
+            3 => "Generate local weekly activity summary report from memory index.",
+            _ => ""
+        };
+    }
+
+    private void ResetSimulatorLogs()
+    {
+        SimulatedLogs.Clear();
+    }
+
+    private void OnDownloadClick()
+    {
+        ShowDownloadMessage = true;
+    }
+
+    private async Task RunSimulation()
+    {
+        if (IsSimulating) return;
+        IsSimulating = true;
+        ResetSimulatorLogs();
+        StateHasChanged();
+
+        var random = new Random();
+
+        // Step 1: Agent Thoughts
+        await Task.Delay(800 + random.Next(400));
+        SimulatedLogs.Add(new SimulatedLogEntry
+        {
+            Timestamp = DateTime.Now.ToString("HH:mm:ss"),
+            Type = "thought",
+            Title = "AGENT THOUGHT",
+            Message = ActiveObjective switch
+            {
+                1 => "Objective received. Scanning file system structure. I need to list subdirectories of c:/User/documents, filter text files, and compute embeddings.",
+                2 => "Executing workspace audit. I will read package config files and verify checksums against database vulnerabilities.",
+                3 => "Compiling ledger logs. Retrieving operational documents within current date range and summarizing agent workloads.",
+                _ => ""
+            }
+        });
+        StateHasChanged();
+
+        // Step 2: Tool Call
+        await Task.Delay(1000 + random.Next(400));
+        SimulatedLogs.Add(new SimulatedLogEntry
+        {
+            Timestamp = DateTime.Now.ToString("HH:mm:ss"),
+            Type = "tool",
+            Title = "TOOL CALL",
+            Message = ActiveObjective switch
+            {
+                1 => "ListDir(Path='c:/User/documents')",
+                2 => "FindFiles(Query='*.json;*.csproj')",
+                3 => "MemoryRetrieve(Filter='weekly_log_summary')",
+                _ => ""
+            },
+            Details = ActiveObjective switch
+            {
+                1 => "[Found files: info.txt (2KB), draft.md (14KB), report.docx (1.2MB)]",
+                2 => "[Found files: package.json, AgenticSystem.csproj]",
+                3 => "[Found logs: 12 events loaded from local memory]",
+                _ => ""
+            }
+        });
+        StateHasChanged();
+
+        // Step 3: Local embedding / action
+        await Task.Delay(1200 + random.Next(400));
+        SimulatedLogs.Add(new SimulatedLogEntry
+        {
+            Timestamp = DateTime.Now.ToString("HH:mm:ss"),
+            Type = "thought",
+            Title = "AGENT THOUGHT",
+            Message = ActiveObjective switch
+            {
+                1 => "Generating vector embeddings for text contents using local model text-embedding-004. Syncing chunks to memory index.",
+                2 => "Extracting dependency definitions. Cross referencing vulnerability index database loaded in local cache.",
+                3 => "Consolidating 12 logs. Organizing data into high-level agent thought processes, tool latency metrics, and success ratios.",
+                _ => ""
+            }
+        });
+        StateHasChanged();
+
+        // Step 4: Outcome / Tool result
+        await Task.Delay(1000 + random.Next(400));
+        SimulatedLogs.Add(new SimulatedLogEntry
+        {
+            Timestamp = DateTime.Now.ToString("HH:mm:ss"),
+            Type = "output",
+            Title = "EXECUTION RESULT",
+            Message = ActiveObjective switch
+            {
+                1 => "Successfully embedded 16 text sections. Vector index memory updated. Sync operation completed successfully.",
+                2 => "Completed dependency scan. 0 major vulnerability patches needed. Warnings: 1 (outdated local logger).",
+                3 => "Weekly report created successfully and stored to disk as output_weekly_report.md.",
+                _ => ""
+            },
+            Details = ActiveObjective switch
+            {
+                1 => "Indexing response: { Status: 'Indexed', VectorCount: 16, MemoryConsumption: '142 KB' }",
+                2 => "Vulnerability scan: { Scanned: 43 libraries, HighRisk: 0, Recommendations: 'Update logger packages' }",
+                3 => "Weekly report summary: { WorkloadsCompleted: 42, SuccessRate: '98.5%', OutputPath: 'c:/User/outputs/weekly_report.md' }",
+                _ => ""
+            }
+        });
+
+        IsSimulating = false;
+        StateHasChanged();
+    }
+
+    public class SimulatedLogEntry
+    {
+        public string Timestamp { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty; // thought, tool, output
+        public string Title { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string Details { get; set; } = string.Empty;
+    }
+}

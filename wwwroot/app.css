@@ -1,0 +1,545 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
+
+:root {
+    --color-navy: #001A4F;      /* primary */
+    --color-white: #FFFFFF;
+    --color-lime: #0AD91A;      /* accent */
+    --color-error: #FF6B6B;     /* alert/error */
+    --color-muted: #E6EEF9;     /* light track / disabled */
+    --color-text: #001A4F;
+    --color-text-muted: #5E6D8C;
+    --space-xs: 8px;
+    --space-sm: 12px;
+    --space-md: 16px;          /* baseline spacing */
+    --space-lg: 24px;
+    --radius-sm: 6px;
+    --radius-md: 10px;         /* buttons & chips */
+    --radius-pill: 999px;
+    --stroke: 2px;
+    --type-ui: "DM Sans", system-ui, sans-serif;
+    --type-head: "Rubik", system-ui, sans-serif;
+    --shadow: 0 4px 12px rgba(0, 26, 79, 0.08);
+    --focus-ring-lime: 0 0 0 4px rgba(10, 217, 26, 0.12);
+    --focus-ring-navy: 0 0 0 4px rgba(0, 26, 79, 0.08);
+}
+
+/* Global Overrides to enforce the Theme without modifying component source files */
+
+/* Core elements */
+html, body, .page, main, 
+.billing-container, .doc-container, .leads-container, .manager-container, 
+.visuals-container, .kb-container, .ceo-container, .search-container, 
+.video-ads-container, .image-posters-container, .facebook-agent-container,
+.whatsapp-agent-container, .email-agent-container, .auth-overlay, .onboard-overlay,
+.layout-container, .dashboard-container, .public-layout-container, .landing-hero,
+.bg-subtle, .section-container, .public-content {
+    background: var(--color-white) !important;
+    background-color: var(--color-white) !important;
+    background-image: none !important;
+    color: var(--color-text) !important;
+    font-family: var(--type-ui) !important;
+}
+
+/* Landing Page Header / Footer / Layout */
+.public-header {
+    background: var(--color-white) !important;
+    background-color: var(--color-white) !important;
+    border-bottom: var(--stroke) solid var(--color-muted) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.public-footer {
+    background: var(--color-muted) !important;
+    background-color: var(--color-muted) !important;
+    border-top: var(--stroke) solid var(--color-muted) !important;
+    color: var(--color-text-muted) !important;
+}
+
+.brand, .footer-brand {
+    color: var(--color-text) !important;
+}
+
+.brand-accent {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    -webkit-text-fill-color: var(--color-lime) !important;
+    color: var(--color-lime) !important;
+    font-weight: 800 !important;
+}
+
+.public-nav .nav-link, .footer-links a {
+    color: var(--color-text-muted) !important;
+}
+
+.public-nav .nav-link:hover, .footer-links a:hover {
+    color: var(--color-navy) !important;
+}
+
+/* Landing Hero specific overrides */
+.hero-glow {
+    display: none !important;
+}
+
+.hero-badge, .section-tag {
+    background: var(--color-muted) !important;
+    background-color: var(--color-muted) !important;
+   
+    color: var(--color-navy) !important;
+    font-weight: 700 !important;
+}
+
+.btn-primary-glow, .public-nav .btn-portal {
+    background: var(--color-navy) !important;
+    background-color: var(--color-navy) !important;
+    color: var(--color-white) !important;
+    border: none !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow) !important;
+    padding: var(--space-sm) var(--space-lg) !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+    text-decoration: none !important;
+    display: inline-block !important;
+}
+
+.btn-primary-glow:hover, .public-nav .btn-portal:hover {
+    background: var(--color-lime) !important;
+    background-color: var(--color-lime) !important;
+    color: var(--color-navy) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: var(--focus-ring-lime) !important;
+}
+
+.btn-secondary-link {
+    color: var(--color-text-muted) !important;
+    text-decoration: none !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-secondary-link:hover {
+    color: var(--color-navy) !important;
+}
+
+/* Feature Cards & Simulator override */
+.feature-card {
+    background: var(--color-white) !important;
+    background-color: var(--color-white) !important;
+    border: var(--stroke) solid var(--color-muted) !important;
+    box-shadow: var(--shadow) !important;
+    border-radius: var(--radius-md) !important;
+    color: var(--color-text) !important;
+}
+
+.feature-card:hover {
+    background: var(--color-muted) !important;
+    background-color: var(--color-muted) !important;
+    border-color: var(--color-navy) !important;
+}
+
+.simulator-window {
+    background: var(--color-white) !important;
+    background-color: var(--color-white) !important;
+    border: var(--stroke) solid var(--color-navy) !important;
+    box-shadow: var(--shadow) !important;
+}
+
+.simulator-header {
+    background: var(--color-muted) !important;
+    background-color: var(--color-muted) !important;
+    border-bottom: var(--stroke) solid var(--color-navy) !important;
+}
+
+.simulator-window, .simulator-window * {
+  
+}
+
+.simulator-window pre, .simulator-window code, .simulator-window span[style*="color: #4ade80"], .simulator-window span[style*="color: rgb(74, 222, 128)"] {
+    color: var(--color-lime) !important;
+}
+
+/* Typography & Headings */
+h1, h2, h3, h4, h5, h6, 
+.banner-title, .section-title, .title-text {
+    font-family: var(--type-head) !important;
+    color: var(--color-text) !important;
+    font-weight: 700 !important;
+}
+
+/* Remove text gradients */
+.gradient-text-purple, .gradient-text-cyan, .gradient-text-orange, .gradient-text-blue,
+.gradient-text-emerald, .gradient-text-rose, .gradient-text,
+h1[class^="gradient-text-"], h2[class^="gradient-text-"], h3[class^="gradient-text-"],
+h1[class*="gradient-text-"], h2[class*="gradient-text-"], h3[class*="gradient-text-"],
+span[class*="gradient-text-"], div[class*="gradient-text-"] {
+    background: none !important;
+    background-clip: unset !important;
+    -webkit-background-clip: unset !important;
+    -webkit-text-fill-color: var(--color-text) !important;
+    color: var(--color-text) !important;
+}
+
+/* Base text */
+p, span, div, td, th, li, a, .text-muted, .form-label, .sidebar-help, .banner-subtitle {
+    color: var(--color-text) ;
+    font-family: var(--type-ui) !important;
+}
+
+/* Muted colors */
+.text-muted, .form-label, .sidebar-help, .banner-subtitle, .user-email, .auth-card p,
+.banner-meta p, .card-subtitle, .metric-sub, .metadata, .time-stamp, .thought-header {
+    color: var(--color-text-muted) !important;
+}
+
+/* Cards & Containers (Glassmorphism & Panels Overrides) */
+.glass-panel, .auth-card, .card, .dashboard-card, .metric-card, .chat-workspace, 
+.chat-sidebar, .chat-main-pane, .thought-box, .session-box, .status-panel,
+.quick-prompts, .detail-panel, .info-card, .leads-card, .form-panel {
+    background: var(--color-white) !important;
+    background-color: var(--color-white) !important;
+    border: var(--stroke) solid var(--color-muted) !important;
+    box-shadow: var(--shadow) !important;
+    color: var(--color-text) !important;
+    border-radius: var(--radius-md) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Sidebar override */
+.sidebar {
+    background: var(--color-muted) !important;
+    background-color: var(--color-muted) !important;
+    border-right: var(--stroke) solid var(--color-muted) !important;
+    border-bottom: none !important;
+}
+.sidebar .navbar-brand, .sidebar .nav-link, .sidebar .nav-text {
+   
+}
+.sidebar .nav-link:hover {
+    background: var(--color-white) !important;
+    color: var(--color-navy) !important;
+}
+.sidebar .nav-link.active {
+    background: var(--color-navy) !important;
+    color: var(--color-white) !important;
+}
+
+/* Top bar / row */
+.top-row {
+    background-color: var(--color-white) !important;
+    border-bottom: var(--stroke) solid var(--color-muted) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.user-session-bar {
+    background: var(--color-muted) !important;
+    border: var(--stroke) solid var(--color-muted) !important;
+    border-radius: var(--radius-pill) !important;
+}
+
+/* Primary / Action Buttons */
+.auth-btn, .btn-primary, .btn-submit, button[type="submit"], .btn-action,
+.btn-save, .btn-send, .btn-create, .btn-add {
+    background: var(--color-navy) !important;
+    background-color: var(--color-navy) !important;
+    color: var(--color-white) !important;
+    border: none !important;
+    border-radius: var(--radius-md) !important;
+    padding: var(--space-sm) var(--space-md) !important;
+    font-weight: 600 !important;
+    box-shadow: var(--shadow) !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+}
+.auth-btn:hover, .btn-primary:hover, .btn-submit:hover, button[type="submit"]:hover,
+.btn-action:hover, .btn-save:hover, .btn-send:hover, .btn-create:hover, .btn-add:hover {
+    background: var(--color-lime) !important;
+    background-color: var(--color-lime) !important;
+    color: var(--color-navy) !important;
+    box-shadow: var(--focus-ring-lime) !important;
+}
+
+/* Secondary / Tab Buttons */
+.auth-tab, .tab-btn, .quick-prompt-btn, .btn-secondary, .btn-link, .btn-outline-primary,
+.quick-task-btn, .filter-btn {
+    background: var(--color-muted) !important;
+    background-color: var(--color-muted) !important;
+    color: var(--color-text) !important;
+    border: var(--stroke) solid var(--color-muted) !important;
+    border-radius: var(--radius-md) !important;
+    padding: var(--space-sm) var(--space-md) !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+}
+.auth-tab:hover, .tab-btn:hover, .quick-prompt-btn:hover, .btn-secondary:hover,
+.btn-outline-primary:hover, .quick-task-btn:hover, .filter-btn:hover {
+    background: var(--color-white) !important;
+    border-color: var(--color-navy) !important;
+    color: var(--color-navy) !important;
+}
+.auth-tab.active, .tab-btn.active, .btn-secondary.active, .btn-outline-primary.active,
+.filter-btn.active {
+    background: var(--color-navy) !important;
+    background-color: var(--color-navy) !important;
+    color: var(--color-white) !important;
+    border-color: var(--color-navy) !important;
+}
+
+/* Inputs and Forms */
+.auth-input, input, select, textarea, .form-control, .input-field {
+    background: var(--color-white) !important;
+    background-color: var(--color-white) !important;
+    border: var(--stroke) solid var(--color-muted) !important;
+    color: var(--color-text) !important;
+    border-radius: var(--radius-sm) !important;
+    padding: var(--space-sm) !important;
+    outline: none !important;
+}
+.auth-input:focus, input:focus, select:focus, textarea:focus, .form-control:focus,
+.input-field:focus {
+    border-color: var(--color-lime) !important;
+    box-shadow: var(--focus-ring-lime) !important;
+}
+
+/* Alerts and Errors */
+.alert-banner, .alert, .validation-message, .invalid, .error-message, .error-panel {
+    background: var(--color-muted) !important;
+    border: var(--stroke) solid var(--color-error) !important;
+    color: var(--color-error) !important;
+}
+#blazor-error-ui {
+    background: var(--color-error) !important;
+    color: var(--color-white) !important;
+    border-top: var(--stroke) solid var(--color-navy) !important;
+}
+
+/* Badges and statuses */
+.badge-status, .status-badge, .badge {
+    border-radius: var(--radius-pill) !important;
+    padding: var(--space-xs) var(--space-sm) !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: var(--space-xs) !important;
+}
+.badge-active, .badge-cyan, .badge-success, .badge-online, 
+[class*="badge-active"], [class*="badge-cyan"], [class*="badge-success"], .status-indicator.online {
+    background: var(--color-muted) !important;
+    border: var(--stroke) solid var(--color-lime) !important;
+    color: var(--color-navy) !important;
+}
+.badge-inactive, .badge-error, .badge-danger, .badge-warning, .badge-offline,
+[class*="badge-inactive"], [class*="badge-error"], [class*="badge-warning"] {
+    background: var(--color-muted) !important;
+    border: var(--stroke) solid var(--color-error) !important;
+    color: var(--color-error) !important;
+}
+
+/* Pulse dots */
+.pulse-dot, .status-dot {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    background: var(--color-lime) !important;
+}
+.pulse-dot.pulse-cyan, .pulse-dot.pulse-green, .pulse-dot.pulse-active {
+    background: var(--color-lime) !important;
+}
+.pulse-dot.pulse-inactive, .pulse-dot.pulse-red, .pulse-dot.pulse-warning {
+    background: var(--color-error) !important;
+}
+
+/* Scrollbars overrides */
+::-webkit-scrollbar-thumb {
+    background: var(--color-text-muted) !important;
+    border-radius: var(--radius-pill) !important;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-navy) !important;
+}
+* {
+    scrollbar-color: var(--color-text-muted) transparent !important;
+}
+
+/* Icons / SVGs */
+svg[stroke="currentColor"] {
+    color: var(--color-text) !important;
+}
+
+/* Progress bars override */
+.progress-bar-fill, .progress-fill, .progress-bar {
+    background-color: var(--color-lime) !important;
+}
+.progress-bar-wrapper, .progress {
+    background-color: var(--color-muted) !important;
+    border-radius: var(--radius-pill) !important;
+}
+
+html, body {
+    font-family: var(--type-ui), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+a, .btn-link {
+    color: var(--color-navy) !important;
+    text-decoration: none !important;
+}
+a:hover, .btn-link:hover {
+    color: var(--color-lime) !important;
+}
+
+.btn-primary {
+    color: var(--color-white) !important;
+    background-color: var(--color-navy) !important;
+    border-color: var(--color-navy) !important;
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: var(--focus-ring-navy) !important;
+}
+
+.content {
+    padding-top: 1.1rem;
+}
+
+h1:focus {
+    outline: none;
+}
+
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid var(--color-lime) !important;
+}
+
+.invalid {
+    outline: 1px solid var(--color-error) !important;
+}
+
+.validation-message {
+    color: var(--color-error) !important;
+}
+
+.blazor-error-boundary {
+    background: var(--color-error) !important;
+    padding: 1rem 1rem 1rem 3.7rem;
+    color: var(--color-white) !important;
+}
+
+    .blazor-error-boundary::after {
+        content: "An error has occurred."
+    }
+
+.darker-border-checkbox.form-check-input {
+    border-color: var(--color-text-muted) !important;
+}
+
+.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+    color: var(--color-text-muted) !important;
+    text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+    text-align: start;
+}
+
+/* Slim Professional Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-text-muted) !important;
+    border-radius: var(--radius-pill) !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-navy) !important;
+}
+
+/* Firefox Support */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-text-muted) transparent !important;
+}
+
+/* Table styles */
+table, .table {
+    width: 100% !important;
+    color: var(--color-text) !important;
+    border-collapse: collapse !important;
+    margin: var(--space-md) 0 !important;
+}
+th, thead th {
+    background-color: var(--color-muted) !important;
+    color: var(--color-text) !important;
+    padding: var(--space-sm) !important;
+    border: 1px solid var(--color-muted) !important;
+    text-align: left !important;
+}
+td, tbody td {
+    background-color: var(--color-white) !important;
+    color: var(--color-text) !important;
+    padding: var(--space-sm) !important;
+    border: 1px solid var(--color-muted) !important;
+}
+tr:hover td {
+    background-color: var(--color-muted) !important;
+}
+
+/* Chat bubble styling overrides */
+.user-bubble, .user-msg .message-bubble, .message-wrapper.user-msg .message-bubble {
+    background: var(--color-navy) !important;
+    color: var(--color-white) !important;
+    border: none !important;
+    border-radius: 16px 16px 2px 16px !important;
+    padding: var(--space-sm) var(--space-md) !important;
+}
+.agent-bubble, .agent-msg .message-bubble, .message-wrapper.agent-msg .message-bubble {
+    background: var(--color-muted) !important;
+    color: var(--color-text) !important;
+    border: var(--stroke) solid var(--color-muted) !important;
+    border-radius: 16px 16px 16px 2px !important;
+    padding: var(--space-sm) var(--space-md) !important;
+}
+.message-sender {
+    color: var(--color-text-muted) !important;
+    font-size: 0.8rem !important;
+    margin-bottom: var(--space-xs) !important;
+}
+
+/* Circular progress SVG override for dashboard visuals */
+.circular-progress::before {
+    background-color: var(--color-white) !important;
+}
+.progress-value {
+    color: var(--color-text) !important;
+}
+
+/* Leads custom switches slider */
+.slider {
+    background-color: var(--color-muted) !important;
+}
+input:checked + .slider {
+    background-color: var(--color-lime) !important;
+}
+
+/* Icon text glow removal */
+.icon-glow {
+    text-shadow: none !important;
+    background: var(--color-muted) !important;
+    border: var(--stroke) solid var(--color-muted) !important;
+    color: var(--color-navy) !important;
+}
+
+/* Card hover interactive highlights */
+.glass-panel:hover, .card:hover, .dashboard-card:hover, .metric-card:hover, .feature-card:hover {
+    border-color: var(--color-lime) !important;
+    transform: translateY(-2px) !important;
+}

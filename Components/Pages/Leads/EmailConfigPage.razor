@@ -1,0 +1,545 @@
+@page "/leads-center/email/config"
+@using AgenticSystem.Data
+@using AgenticSystem.Services
+@inject FirebaseAuthService AuthService
+@inject FirebaseLeadsService LeadsService
+@inject NavigationManager Navigation
+
+<PageTitle>Email Agent Configuration - Agentic OS</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    .config-container {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090b16 60%, #02040a 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+        padding: 2.5rem;
+    }
+
+    .glass-panel {
+        background: rgba(30, 41, 59, 0.45);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(56, 189, 248, 0.15); /* Sky blue accent for email */
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        padding: 2.5rem;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    @@media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        .config-container {
+            padding: 1.25rem;
+        }
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .form-label {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+    }
+
+    .custom-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.85rem 1.1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.6);
+        color: white;
+        font-size: 0.95rem;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+
+    .custom-input:focus {
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+    }
+
+    .custom-input:disabled {
+        background: rgba(15, 23, 42, 0.25);
+        color: #94a3b8;
+        border-color: rgba(255, 255, 255, 0.05);
+        cursor: not-allowed;
+    }
+
+    .custom-input::placeholder {
+        color: #475569;
+    }
+
+    input:disabled + .slider {
+        background-color: #334155;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .password-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .password-toggle-btn {
+        position: absolute;
+        right: 1rem;
+        background: none;
+        border: none;
+        color: #64748b;
+        cursor: pointer;
+        padding: 0;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: color 0.2s ease;
+    }
+
+    .password-toggle-btn:hover {
+        color: #38bdf8;
+    }
+
+    .btn-action {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        border: none;
+        color: white;
+        padding: 0.85rem 1.75rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+    }
+
+    .btn-action:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
+        background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+    }
+
+    .btn-action:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #cbd5e1;
+        padding: 0.85rem 1.75rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .alert-success {
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        color: #34d399;
+        padding: 1rem;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-card {
+        background: rgba(56, 189, 248, 0.05);
+        border: 1px solid rgba(56, 189, 248, 0.15);
+        border-radius: 12px;
+        padding: 1.25rem;
+        color: #94a3b8;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        margin-bottom: 2rem;
+    }
+
+    .btn-pill-fill {
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        color: #38bdf8;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0.5rem;
+        align-self: flex-start;
+    }
+
+    .btn-pill-fill:hover {
+        background: rgba(56, 189, 248, 0.2);
+        color: #f8fafc;
+        border-color: #38bdf8;
+    }
+
+    /* Toggle Switch */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px;
+    }
+
+    .switch input { 
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #475569;
+        transition: .4s;
+        border-radius: 26px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: #38bdf8;
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(24px);
+    }
+</style>
+
+<div class="config-container">
+    <!-- Header -->
+    <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 1.5rem; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="margin: 0; font-size: 2.3rem; font-weight: 800; background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">⚙️ Email Server Access</h1>
+            <p style="color: #94a3b8; margin: 0.25rem 0 0 0; font-size: 1rem;">Configure secure IMAP, POP3, and SMTP credentials for the autonomous Email Worker Node</p>
+        </div>
+        <button class="btn-secondary" style="padding: 0.6rem 1.25rem; font-size: 0.9rem;" @onclick='() => Navigation.NavigateTo("/leads-center/email")'>
+            Back to Queue
+        </button>
+    </header>
+
+    <div style="max-width: 800px; margin: 0 auto;">
+        <!-- Secure Storage Banner -->
+        <div class="info-card" style="display: flex; gap: 1rem; align-items: flex-start;">
+            <div style="font-size: 1.5rem;">🔒</div>
+            <div>
+                <strong style="color: #f1f5f9; display: block; margin-bottom: 0.25rem;">Secure Encryption Active</strong>
+                Your email passwords are encrypted using server-side AES-256 prior to storage on Firebase. 
+                Credentials remain completely secure and are only decrypted in-memory on the backend application server when reading or sending queue messages.
+            </div>
+        </div>
+
+        @if (ShowSuccessAlert)
+        {
+            <div class="alert-success">
+                <span>✅</span>
+                <span>Email access configuration saved and synchronized securely with Firebase.</span>
+            </div>
+        }
+
+        <!-- Configuration Form -->
+        <div class="glass-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                <h3 style="margin: 0; color: #f1f5f9; font-weight: 700;">
+                    @(IsReadOnly ? "Account & Server Details (Locked)" : "Account & Server Details (Editing)")
+                </h3>
+                @if (!IsReadOnly)
+                {
+                    <button class="btn-pill-fill" @onclick="AutoFillExample" style="margin: 0;">
+                        💡 Load Example Credentials
+                    </button>
+                }
+            </div>
+
+            <div class="form-grid">
+                <!-- Username -->
+                <div class="form-group">
+                    <label class="form-label" for="username">Username / Email Address</label>
+                    <input id="username" type="email" class="custom-input" placeholder="sales@yourcompany.com" @bind="Config.Username" disabled="@IsReadOnly" />
+                </div>
+
+                <!-- Password -->
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="password-container">
+                        <input id="password" type="@(ShowPassword ? "text" : "password")" class="custom-input" placeholder="@PasswordPlaceholder" @bind="Config.EncryptedPassword" disabled="@IsReadOnly" />
+                        @if (!IsReadOnly)
+                        {
+                            <button type="button" class="password-toggle-btn" @onclick="TogglePasswordVisibility">
+                                @(ShowPassword ? "Hide" : "Show")
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Protocol Selector -->
+                <div class="form-group">
+                    <label class="form-label" for="protocol">Incoming Protocol</label>
+                    <select id="protocol" class="custom-input" @bind="Config.IncomingProtocol" disabled="@IsReadOnly">
+                        <option value="IMAP">IMAP (Recommended - synchronizes states)</option>
+                        <option value="POP3">POP3 (Downloads and removes copy)</option>
+                    </select>
+                </div>
+
+                <!-- Incoming Server -->
+                <div class="form-group">
+                    <label class="form-label" for="incomingServer">Incoming Mail Server</label>
+                    <input id="incomingServer" type="text" class="custom-input" placeholder="mail.yourcompany.com" @bind="Config.IncomingServer" disabled="@IsReadOnly" />
+                </div>
+
+                <!-- Ports (Conditional UI) -->
+                @if (Config.IncomingProtocol == "IMAP")
+                {
+                    <div class="form-group">
+                        <label class="form-label" for="imapPort">IMAP Port (SSL/TLS)</label>
+                        <input id="imapPort" type="number" class="custom-input" placeholder="993" @bind="Config.ImapPort" disabled="@IsReadOnly" />
+                    </div>
+                }
+                else
+                {
+                    <div class="form-group">
+                        <label class="form-label" for="pop3Port">POP3 Port (SSL/TLS)</label>
+                        <input id="pop3Port" type="number" class="custom-input" placeholder="995" @bind="Config.Pop3Port" disabled="@IsReadOnly" />
+                    </div>
+                }
+
+                <!-- Outgoing SMTP Server -->
+                <div class="form-group">
+                    <label class="form-label" for="outgoingServer">Outgoing Server (SMTP)</label>
+                    <input id="outgoingServer" type="text" class="custom-input" placeholder="mail.yourcompany.com" @bind="Config.OutgoingServer" disabled="@IsReadOnly" />
+                </div>
+
+                <!-- SMTP Port -->
+                <div class="form-group">
+                    <label class="form-label" for="smtpPort">SMTP Port (SSL/TLS)</label>
+                    <input id="smtpPort" type="number" class="custom-input" placeholder="465" @bind="Config.SmtpPort" disabled="@IsReadOnly" />
+                </div>
+
+                <!-- Authentication Settings -->
+                <div class="form-group full-width" style="flex-direction: row; align-items: center; justify-content: space-between; background: rgba(15, 23, 42, 0.3); border: 1px solid rgba(255,255,255,0.02); padding: 1rem 1.25rem; border-radius: 10px; margin-top: 1rem;">
+                    <div>
+                        <strong style="display: block; color: #f1f5f9; font-size: 0.9rem;">Requires Authentication</strong>
+                        <span style="color: #64748b; font-size: 0.78rem;">IMAP, POP3, and SMTP servers require account-matching authentication</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" @bind="Config.RequiresAuthentication" disabled="@IsReadOnly" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- Actions -->
+                <div class="form-group full-width" style="display: flex; flex-direction: row; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+                    @if (IsReadOnly)
+                    {
+                        <button class="btn-secondary" type="button" @onclick='() => Navigation.NavigateTo("/leads-center/email")'>
+                            Back to Queue
+                        </button>
+                        <button class="btn-action" type="button" @onclick='() => Navigation.NavigateTo("/leads-center/email/config/test")' style="background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2);">
+                            🧪 Test Connection
+                        </button>
+                        <button class="btn-action" type="button" @onclick="EnableEditing" style="background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);">
+                            ✏️ Edit Configuration
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn-secondary" type="button" @onclick="CancelEditing">
+                            Cancel
+                        </button>
+                        <button class="btn-action" type="button" @onclick="SaveConfig" disabled="@IsSaving">
+                            @if (IsSaving)
+                            {
+                                <span>Saving Security Keys...</span>
+                            }
+                            else
+                            {
+                                <span>Save Configuration</span>
+                            }
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private EmailConfig Config { get; set; } = new();
+    private bool ShowPassword { get; set; } = false;
+    private bool IsSaving { get; set; } = false;
+    private bool ShowSuccessAlert { get; set; } = false;
+    private bool IsReadOnly { get; set; } = true;
+    private string _savedPassword { get; set; } = string.Empty;
+
+    private string PasswordPlaceholder => IsReadOnly
+        ? (string.IsNullOrEmpty(_savedPassword) ? "No password configured" : "••••••••")
+        : "Enter password";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null)
+        {
+            // If the user isn't logged in, redirect them to the home page (where login resides)
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        var savedConfig = await LeadsService.GetEmailConfigAsync(userId);
+        if (savedConfig != null)
+        {
+            Config = savedConfig;
+            _savedPassword = savedConfig.EncryptedPassword;
+            
+            // Check if configuration exists
+            if (!string.IsNullOrEmpty(Config.Username) && !string.IsNullOrEmpty(Config.IncomingServer))
+            {
+                IsReadOnly = true;
+            }
+            else
+            {
+                IsReadOnly = false;
+            }
+            
+            // Clear the password field for UI security
+            Config.EncryptedPassword = string.Empty;
+        }
+        else
+        {
+            Config = new EmailConfig { UserId = userId };
+            IsReadOnly = false;
+            _savedPassword = string.Empty;
+        }
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        ShowPassword = !ShowPassword;
+    }
+
+    private void EnableEditing()
+    {
+        IsReadOnly = false;
+        Config.EncryptedPassword = string.Empty; // Start empty when editing
+        ShowSuccessAlert = false;
+    }
+
+    private async Task CancelEditing()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null) return;
+
+        var savedConfig = await LeadsService.GetEmailConfigAsync(userId);
+        if (savedConfig != null && !string.IsNullOrEmpty(savedConfig.Username) && !string.IsNullOrEmpty(savedConfig.IncomingServer))
+        {
+            Config = savedConfig;
+            _savedPassword = savedConfig.EncryptedPassword;
+            Config.EncryptedPassword = string.Empty;
+            IsReadOnly = true;
+        }
+        else
+        {
+            // If they cancel and there is no saved configuration, just navigate back
+            Navigation.NavigateTo("/leads-center/email");
+        }
+    }
+
+    private void AutoFillExample()
+    {
+        Config.Username = "sales@humanicleads.co.za";
+        Config.EncryptedPassword = "SamplePassword123!"; // Note: typed in plain text, will be encrypted on save
+        Config.IncomingServer = "mail.humanicleads.co.za";
+        Config.IncomingProtocol = "IMAP";
+        Config.ImapPort = 993;
+        Config.Pop3Port = 995;
+        Config.OutgoingServer = "mail.humanicleads.co.za";
+        Config.SmtpPort = 465;
+        Config.RequiresAuthentication = true;
+        
+        ShowSuccessAlert = false;
+    }
+
+    private async Task SaveConfig()
+    {
+        var userId = AuthService.CurrentUser?.LocalId;
+        if (userId == null) return;
+
+        IsSaving = true;
+        ShowSuccessAlert = false;
+        StateHasChanged();
+
+        try
+        {
+            // If password is left blank, it means they did not edit it - restore the saved one.
+            if (string.IsNullOrEmpty(Config.EncryptedPassword))
+            {
+                Config.EncryptedPassword = _savedPassword;
+            }
+
+            await LeadsService.SaveEmailConfigAsync(userId, Config);
+            
+            // Refresh local cache values
+            _savedPassword = Config.EncryptedPassword;
+            Config.EncryptedPassword = string.Empty; // Clear it again for UI security
+            
+            IsReadOnly = true;
+            ShowSuccessAlert = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving email configuration: {ex.Message}");
+        }
+        finally
+        {
+            IsSaving = false;
+            StateHasChanged();
+        }
+    }
+}

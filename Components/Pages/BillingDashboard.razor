@@ -1,0 +1,1077 @@
+@page "/billing"
+@using System.Reactive.Linq
+@using AgenticSystem.Data
+@using AgenticSystem.Services
+@inject BillingService BillingSvc
+@inject FirebaseAuthService AuthService
+@inject FirebaseLoggerService LoggerService
+@implements IDisposable
+
+<PageTitle>Billing & Usage - Agentic OS</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    .billing-container {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090b14 60%, #030712 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .header-banner {
+        background: rgba(30, 27, 75, 0.25);
+        border: 1px solid rgba(139, 92, 246, 0.15);
+        border-radius: 16px;
+        padding: 1.5rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        backdrop-filter: blur(12px);
+    }
+
+    .banner-title-area {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .icon-glow {
+        font-size: 2.5rem;
+        text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+    }
+
+    .gradient-text-purple {
+        background: linear-gradient(135deg, #c084fc 0%, #a78bfa 50%, #818cf8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        margin: 0;
+        font-size: 1.8rem;
+    }
+
+    .banner-subtitle {
+        color: #94a3b8;
+        margin: 0.25rem 0 0 0;
+        font-size: 0.95rem;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.85rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .badge-active {
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        color: #34d399;
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+    }
+
+    .badge-inactive {
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        color: #f87171;
+    }
+
+    /* Pulse dot styling */
+    .pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+
+    .pulse-green {
+        background: #10b981;
+        animation: pulse 1.8s infinite;
+    }
+
+    @@keyframes pulse {
+        0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+
+    @@media (max-width: 1024px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.45);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 1.5rem;
+        backdrop-filter: blur(16px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .metrics-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+        background: rgba(30, 41, 59, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent);
+    }
+
+    .metric-label {
+        color: #94a3b8;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #f8fafc;
+        line-height: 1.2;
+    }
+
+    .metric-sub {
+        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+
+    .highlight-purple { color: #c084fc; }
+    .highlight-green { color: #34d399; }
+    .highlight-blue { color: #38bdf8; }
+
+    .chart-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .chart-bar-row {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .chart-bar-info {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        color: #cbd5e1;
+    }
+
+    .chart-bar-bg {
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 9999px;
+        height: 10px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .chart-bar-fill {
+        height: 100%;
+        border-radius: 9999px;
+        transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .progress-purple { background: linear-gradient(90deg, #818cf8, #c084fc); }
+    .progress-cyan { background: linear-gradient(90deg, #06b6d4, #38bdf8); }
+    .progress-emerald { background: linear-gradient(90deg, #059669, #34d399); }
+
+    /* Subscription settings card styling */
+    .sub-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #cbd5e1;
+    }
+
+    .custom-input {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 0.6rem 0.85rem;
+        color: #f8fafc;
+        font-family: inherit;
+        font-size: 0.9rem;
+        outline: none;
+        transition: all 0.2s;
+    }
+
+    .custom-input:focus {
+        border-color: #a78bfa;
+        box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.25);
+    }
+
+    .btn-action-primary {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+
+    .btn-action-primary:hover {
+        opacity: 0.95;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+    }
+
+    .btn-action-sec {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: #e2e8f0;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-action-sec:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-danger-outline {
+        background: rgba(239, 68, 68, 0.05);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #f87171;
+    }
+
+    .btn-danger-outline:hover {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    /* Switch toggle */
+    .switch-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.02);
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 24px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.15);
+        transition: .3s;
+        border-radius: 24px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: #8b5cf6;
+        box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(24px);
+    }
+
+    /* Table styling */
+    .logs-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .billing-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 0.9rem;
+    }
+
+    .billing-table th {
+        background: rgba(30, 41, 59, 0.4);
+        padding: 0.85rem 1rem;
+        color: #94a3b8;
+        font-weight: 600;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .billing-table td {
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        color: #cbd5e1;
+    }
+
+    .billing-table tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .text-mono {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.8rem;
+    }
+
+    .pulse-container {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: rgba(139, 92, 246, 0.08);
+        border: 1px solid rgba(139, 92, 246, 0.15);
+        border-radius: 8px;
+        font-size: 0.8rem;
+        color: #c084fc;
+    }
+
+    .pulse-light {
+        width: 8px;
+        height: 8px;
+        background-color: #a78bfa;
+        border-radius: 50%;
+        animation: stream-glow 1.5s infinite;
+    }
+
+    @@keyframes stream-glow {
+        0% { transform: scale(0.95); opacity: 0.5; }
+        50% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 8px #a78bfa; }
+        100% { transform: scale(0.95); opacity: 0.5; }
+    }
+
+    .table-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .search-filter-box {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-grow: 1;
+        max-width: 500px;
+    }
+
+    .alert-banner {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        border-radius: 12px;
+        padding: 1rem;
+        color: #fdba74;
+        font-size: 0.88rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Responsive CC input grid */
+    .card-input-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 0.5rem;
+    }
+
+    @@media (max-width: 640px) {
+        .header-banner {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .search-filter-box {
+            flex-direction: column;
+            align-items: stretch;
+            width: 100%;
+        }
+        
+        .search-filter-box input,
+        .search-filter-box select {
+            width: 100%;
+            max-width: none;
+        }
+    }
+
+    @@media (max-width: 580px) {
+        .chart-bar-info {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .metrics-summary-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .billing-container {
+            padding: 1rem;
+        }
+        
+        .glass-panel {
+            padding: 1rem;
+        }
+    }
+
+    @@media (max-width: 400px) {
+        .card-input-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="billing-container">
+    <!-- Header Banner -->
+    <div class="header-banner">
+        <div class="banner-title-area">
+            <div class="icon-glow">💳</div>
+            <div>
+                <h1 class="gradient-text-purple">Billing & Usage Management</h1>
+                <p class="banner-subtitle">Private Pay-As-You-Go subscription logs and real-time model token calculation metrics</p>
+            </div>
+        </div>
+        <div>
+            @if (Summary?.Subscription?.IsActive == true)
+            {
+                <span class="badge-status badge-active">
+                    <span class="pulse-dot pulse-green"></span>
+                    Active Plan: Pay-as-you-Go
+                </span>
+            }
+            else
+            {
+                <span class="badge-status badge-inactive">
+                    🔴 Subscription Inactive
+                </span>
+            }
+        </div>
+    </div>
+
+    <!-- Active Subscription Warning banner if not subscribed -->
+    @if (Summary?.Subscription?.IsActive != true)
+    {
+        <div class="alert-banner">
+            <span class="alert-icon">⚠️</span>
+            <div>
+                <strong>Subscription Required:</strong> The Pay-As-You-Go subscription is currently inactive. System agent workflows will compile under developer sandbox limits. Enable subscription below to process live workloads at production rates.
+            </div>
+        </div>
+    }
+
+    <!-- Metrics Summary Cards -->
+    <div class="metrics-summary-grid">
+        <div class="metric-card">
+            <span class="metric-label">Accrued Charges (Retail)</span>
+            <span class="metric-value highlight-purple">
+                $@(Summary?.TotalRetailCost.ToString("F3") ?? "0.000")
+            </span>
+            <span class="metric-sub">Billed to @(Summary?.Subscription?.CardNumberLast4 != null ? $"Visa **** {Summary.Subscription.CardNumberLast4}" : "card")</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Google API Cost (Wholesale)</span>
+            <span class="metric-value highlight-blue">
+                $@(Summary?.TotalWholesaleCost.ToString("F3") ?? "0.000")
+            </span>
+            <span class="metric-sub">Actual developer wholesale costs</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">System Margin</span>
+            <span class="metric-value highlight-green">
+                $@(( (Summary?.TotalRetailCost ?? 0.0) - (Summary?.TotalWholesaleCost ?? 0.0) ).ToString("F3"))
+            </span>
+            <span class="metric-sub">Margin profit from retail markup</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Total Tokens Consumed</span>
+            <span class="metric-value">
+                @((Summary?.TotalTokens ?? 0).ToString("N0"))
+            </span>
+            <span class="metric-sub">@((Summary?.TotalInputTokens ?? 0).ToString("N0")) In / @((Summary?.TotalOutputTokens ?? 0).ToString("N0")) Out</span>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Left Panel: Agent Consumption & Detailed Logs -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Agent Breakdown Chart Card -->
+            <div class="glass-panel">
+                <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: #a78bfa; font-size: 1.15rem;">Token Consumption Breakdown by Agent</h3>
+                <div class="chart-container">
+                    @if (Summary != null)
+                    {
+                        var maxTokens = Summary.AgentBreakdowns.Any() ? Summary.AgentBreakdowns.Max(x => x.InputTokens + x.OutputTokens) : 1;
+                        if (maxTokens == 0) maxTokens = 1;
+
+                        @foreach (var agent in Summary.AgentBreakdowns.OrderByDescending(x => x.InputTokens + x.OutputTokens))
+                        {
+                            var totalTokens = agent.InputTokens + agent.OutputTokens;
+                            var widthPct = (totalTokens * 100) / maxTokens;
+                            
+                            <div class="chart-bar-row">
+                                <div class="chart-bar-info">
+                                    <strong>@agent.AgentName</strong>
+                                    <span>
+                                        <span class="text-mono">@totalTokens.ToString("N0") Tokens</span> | 
+                                        <span class="text-mono highlight-purple">$@agent.EstimatedRetailCost.ToString("F4")</span>
+                                        (@agent.ExecutionCount Runs)
+                                    </span>
+                                </div>
+                                <div class="chart-bar-bg">
+                                    <div class="chart-bar-fill progress-purple" style="width: @(widthPct)%;"></div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p style="color: #64748b;">Loading breakdown statistics...</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Detailed Logs Card -->
+            <div class="glass-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                    <h3 style="margin: 0; color: #a78bfa; font-size: 1.15rem;">Detailed Billing History Logs</h3>
+                    <div class="pulse-container">
+                        <div class="pulse-light"></div>
+                        <span>Live Sync Active</span>
+                    </div>
+                </div>
+
+                <div class="logs-panel">
+                    <!-- Search & Filter Controls -->
+                    <div class="table-actions">
+                        <div class="search-filter-box">
+                            <input type="text" class="custom-input" style="flex-grow: 1;" placeholder="Search task descriptions..." @bind="SearchQuery" @bind:event="oninput" />
+                            
+                            <select class="custom-input" @bind="SelectedAgentFilter">
+                                <option value="all">All Agents</option>
+                                @foreach (var agent in AgentFilters)
+                                {
+                                    <option value="@agent">@agent</option>
+                                }
+                            </select>
+                        </div>
+                        <div style="color: #94a3b8; font-size: 0.85rem;">
+                            Showing @FilteredLogs.Count() of @(Summary?.HistoryLogs.Count ?? 0) logs
+                        </div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="table-container">
+                        <table class="billing-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Agent Name</th>
+                                    <th>Task Context / Prompt</th>
+                                    <th>Tokens Used</th>
+                                    <th>Wholesale</th>
+                                    <th>Retail Billed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (FilteredLogs.Any())
+                                {
+                                    @foreach (var log in FilteredLogs)
+                                    {
+                                        <tr>
+                                            <td class="text-mono" style="white-space: nowrap;">@log.Timestamp.ToLocalTime().ToString("MM-dd HH:mm:ss")</td>
+                                            <td>
+                                                <span style="font-weight: 600; font-size: 0.85rem; color: #a78bfa;">@log.AgentName</span>
+                                            </td>
+                                            <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="@log.Description">
+                                                @log.Description
+                                            </td>
+                                            <td class="text-mono">
+                                                <span style="color: #38bdf8;">@log.InputTokens.ToString("N0")</span>
+                                                <span style="color: #64748b;"> / </span>
+                                                <span style="color: #34d399;">@log.OutputTokens.ToString("N0")</span>
+                                            </td>
+                                            <td class="text-mono" style="color: #38bdf8;">$@log.WholesaleCost.ToString("F5")</td>
+                                            <td class="text-mono" style="color: #c084fc; font-weight: 600;">$@log.RetailCost.ToString("F4")</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 2rem; color: #64748b;">No billing logs found matching your filters.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Subscription & Budget Controls -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Subscription Management Control Panel -->
+            <div class="glass-panel">
+                <h3 style="margin-top: 0; margin-bottom: 1.25rem; color: #a78bfa; font-size: 1.15rem;">Subscription Plan Control</h3>
+                
+                <div class="sub-form">
+                    <!-- IsActive Toggle -->
+                    <div class="switch-container">
+                        <div>
+                            <strong style="display: block; font-size: 0.9rem;">Pay-As-You-Go Billing</strong>
+                            <span style="font-size: 0.75rem; color: #94a3b8;">Billed monthly based on tokens</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" checked="@SubscriptionActive" @onchange="ToggleSubscription" />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <!-- Budget Limit Slider -->
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label class="form-label">Monthly Spending Cap</label>
+                            <span class="text-mono highlight-purple" style="font-weight: 700;">
+                                @(BudgetCap >= 500 ? "Unlimited" : $"${BudgetCap.ToString("F0")}")
+                            </span>
+                        </div>
+                        <input type="range" min="10" max="500" step="10" @bind="BudgetCap" @bind:event="oninput" @onchange="SaveSubscriptionSettings" style="accent-color: #8b5cf6; cursor: pointer;" />
+                        
+                        <!-- Budget Limit Progress Bar -->
+                        @if (Summary != null)
+                        {
+                            var budgetProgress = Math.Min(100.0, (Summary.TotalRetailCost * 100.0) / BudgetCap);
+                            <div style="margin-top: 0.5rem;">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-bottom: 0.25rem;">
+                                    <span>Usage relative to Cap</span>
+                                    <span>@budgetProgress.ToString("F1")% Used</span>
+                                </div>
+                                <div class="chart-bar-bg" style="height: 6px;">
+                                    <div class="chart-bar-fill @(budgetProgress > 90 ? "progress-emerald" : "progress-purple")" style="width: @(budgetProgress)%;"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Card Details Box -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 1rem;">
+                        <h4 style="margin-top: 0; margin-bottom: 0.75rem; font-size: 0.85rem; color: #cbd5e1;">Payment Method Details</h4>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <div class="form-group">
+                                <label class="form-label" style="font-size: 0.75rem;">Cardholder Name</label>
+                                <input type="text" class="custom-input" style="padding: 0.4rem 0.6rem; font-size: 0.82rem;" @bind="CardholderName" />
+                            </div>
+                            <div class="card-input-grid">
+                                <div class="form-group">
+                                    <label class="form-label" style="font-size: 0.75rem;">Card Number (Last 4)</label>
+                                    <input type="text" maxlength="4" class="custom-input text-mono" style="padding: 0.4rem 0.6rem; font-size: 0.82rem;" @bind="CardNumberLast4" placeholder="4242" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" style="font-size: 0.75rem;">Expiry Date</label>
+                                    <input type="text" maxlength="5" class="custom-input text-mono" style="padding: 0.4rem 0.6rem; font-size: 0.82rem;" @bind="CardExpiry" placeholder="MM/YY" />
+                                </div>
+                            </div>
+                            <button class="btn-action-primary" style="padding: 0.5rem; font-size: 0.85rem; margin-top: 0.25rem;" @onclick="SaveSubscriptionSettings">
+                                Update Credit Card Info
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Operational Safeguards Card -->
+            <div class="glass-panel" style="border-color: rgba(239, 68, 68, 0.25); margin-top: 1.5rem;">
+                <h3 style="margin-top: 0; margin-bottom: 1rem; color: #f87171; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
+                    🛡️ Operational Safeguards
+                </h3>
+                
+                <div class="sub-form">
+                    <!-- Global Kill Switch -->
+                    <div class="switch-container" style="background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.15);">
+                        <div>
+                            <strong style="display: block; font-size: 0.9rem; color: #f87171;">System Kill Switch</strong>
+                            <span style="font-size: 0.75rem; color: #94a3b8;">Instantly block all agent executions</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" checked="@IsKillSwitchActive" @onchange="ToggleKillSwitch" />
+                            <span class="slider" style="background-color: rgba(239, 68, 68, 0.25);"></span>
+                        </label>
+                    </div>
+
+                    <!-- Max Tokens per Call -->
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label class="form-label">Max Tokens per Call</label>
+                            <span class="text-mono highlight-purple" style="font-weight: 700;">
+                                @MaxTokensPerCall.ToString("N0")
+                            </span>
+                        </div>
+                        <input type="range" min="500" max="20000" step="500" @bind="MaxTokensPerCall" @bind:event="oninput" @onchange="SaveSubscriptionSettings" style="accent-color: #f87171; cursor: pointer;" />
+                    </div>
+
+                    <!-- Sliders for Agent Limits -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #cbd5e1; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 0.4rem;">Per-Agent Call Limits</h4>
+                        
+                        <div class="form-group">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span>CEO Agent Limit</span>
+                                <span class="text-mono highlight-blue" style="font-weight: 600;">@CeoLimit calls</span>
+                            </div>
+                            <input type="range" min="1" max="100" @bind="CeoLimit" @bind:event="oninput" @onchange="SaveSubscriptionSettings" style="accent-color: #8b5cf6; cursor: pointer; height: 4px;" />
+                        </div>
+
+                        <div class="form-group">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span>Manager Agent Limit</span>
+                                <span class="text-mono highlight-blue" style="font-weight: 600;">@ManagerLimit calls</span>
+                            </div>
+                            <input type="range" min="1" max="100" @bind="ManagerLimit" @bind:event="oninput" @onchange="SaveSubscriptionSettings" style="accent-color: #8b5cf6; cursor: pointer; height: 4px;" />
+                        </div>
+
+                        <div class="form-group">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span>Search Agent Limit</span>
+                                <span class="text-mono highlight-blue" style="font-weight: 600;">@SearchLimit calls</span>
+                            </div>
+                            <input type="range" min="1" max="100" @bind="SearchLimit" @bind:event="oninput" @onchange="SaveSubscriptionSettings" style="accent-color: #8b5cf6; cursor: pointer; height: 4px;" />
+                        </div>
+
+                        <div class="form-group">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span>Social Agent Limit</span>
+                                <span class="text-mono highlight-blue" style="font-weight: 600;">@SocialLimit calls</span>
+                            </div>
+                            <input type="range" min="1" max="100" @bind="SocialLimit" @bind:event="oninput" @onchange="SaveSubscriptionSettings" style="accent-color: #8b5cf6; cursor: pointer; height: 4px;" />
+                        </div>
+
+                        <div class="form-group">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span>Documents Agent Limit</span>
+                                <span class="text-mono highlight-blue" style="font-weight: 600;">@DocumentsLimit calls</span>
+                            </div>
+                            <input type="range" min="1" max="100" @bind="DocumentsLimit" @bind:event="oninput" @onchange="SaveSubscriptionSettings" style="accent-color: #8b5cf6; cursor: pointer; height: 4px;" />
+                        </div>
+
+                        <div class="form-group">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span>Other System Agents Limit</span>
+                                <span class="text-mono highlight-blue" style="font-weight: 600;">@AnalystLimit calls</span>
+                            </div>
+                            <input type="range" min="1" max="100" @bind="AnalystLimit" @bind:event="oninput" @onchange="SaveSubscriptionSettings" style="accent-color: #8b5cf6; cursor: pointer; height: 4px;" />
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.25rem;">
+                        <button class="btn-action-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem;" @onclick="SaveAllSettings" disabled="@IsSaving">
+                            @if (IsSaving)
+                            {
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <span>💾 Save Configurations</span>
+                            }
+                        </button>
+                        @if (ShowSaveSuccess)
+                        {
+                            <div class="save-success-msg" style="color: #34d399; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.25rem; margin-top: 0.5rem; text-align: center; animation: fadeIn 0.3s ease;">
+                                <span>✅</span> Settings synchronized to Firebase!
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- In-Memory / Firebase Status Card -->
+            <div class="glass-panel" style="margin-top: 1.5rem;">
+                <h3 style="margin-top: 0; margin-bottom: 0.75rem; color: #cbd5e1; font-size: 0.95rem;">Database Sync Details</h3>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem; color: #94a3b8;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Data Endpoint:</span>
+                        <span class="text-mono" style="color: #cbd5e1;">@(_useLocalFallback ? "In-Memory Fallback" : "Firebase RTDB")</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Billing Collection:</span>
+                        <span class="text-mono" style="color: #cbd5e1;">/BillingSubscriptions</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Historical Logs:</span>
+                        <span class="text-mono" style="color: #cbd5e1;">@Summary?.HistoryLogs.Count Items</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Subscribed Since:</span>
+                        <span class="text-mono" style="color: #cbd5e1;">@(Summary?.Subscription?.SubscribedAt.ToLocalTime().ToString("yyyy-MM-dd") ?? "N/A")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private BillingSummary? Summary { get; set; }
+    private IDisposable? LogStreamSubscription { get; set; }
+    
+    // Binding parameters
+    private bool SubscriptionActive { get; set; }
+    private double BudgetCap { get; set; } = 50.0;
+    private string CardholderName { get; set; } = string.Empty;
+    private string CardNumberLast4 { get; set; } = string.Empty;
+    private string CardExpiry { get; set; } = string.Empty;
+    private bool _useLocalFallback;
+    private bool IsSaving { get; set; } = false;
+    private bool ShowSaveSuccess { get; set; } = false;
+
+    // Limit parameters
+    private bool IsKillSwitchActive { get; set; }
+    private int MaxTokensPerCall { get; set; } = 5000;
+    private int CeoLimit { get; set; } = 20;
+    private int ManagerLimit { get; set; } = 20;
+    private int SearchLimit { get; set; } = 20;
+    private int SocialLimit { get; set; } = 20;
+    private int DocumentsLimit { get; set; } = 20;
+    private int AnalystLimit { get; set; } = 20;
+
+    // Search and filters
+    private string SearchQuery { get; set; } = string.Empty;
+    private string SelectedAgentFilter { get; set; } = "all";
+    private List<string> AgentFilters { get; set; } = new();
+
+    private IEnumerable<UsageLogItem> FilteredLogs
+    {
+        get
+        {
+            if (Summary == null) return Enumerable.Empty<UsageLogItem>();
+            var query = Summary.HistoryLogs.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(SearchQuery))
+            {
+                query = query.Where(x => x.Description.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) || 
+                                         x.AgentName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (SelectedAgentFilter != "all")
+            {
+                query = query.Where(x => x.AgentName.Equals(SelectedAgentFilter, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return query;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSummaryData();
+
+        // Subscribe to live updates from FirebaseLoggerService
+        LogStreamSubscription = LoggerService.SubscribeToLogs().Subscribe(async logEvent =>
+        {
+            // When a new log event fires (even in-memory local fallback), reload the summary data
+            await InvokeAsync(async () =>
+            {
+                await LoadSummaryData();
+                StateHasChanged();
+            });
+        });
+    }
+
+    private async Task LoadSummaryData()
+    {
+        var userId = AuthService.CurrentUser?.LocalId ?? "default_user";
+        _useLocalFallback = BillingSvc.UseLocalFallback;
+        Summary = await BillingSvc.GetBillingSummaryAsync(userId);
+
+        if (Summary != null)
+        {
+            SubscriptionActive = Summary.Subscription.IsActive;
+            BudgetCap = Summary.Subscription.MonthlyBudgetLimit;
+            CardholderName = Summary.Subscription.CardholderName;
+            CardNumberLast4 = Summary.Subscription.CardNumberLast4;
+            CardExpiry = Summary.Subscription.CardExpiry;
+            IsKillSwitchActive = Summary.Subscription.IsKillSwitchActive;
+            MaxTokensPerCall = Summary.Subscription.MaxTokensPerCall;
+            CeoLimit = Summary.Subscription.CeoLimit;
+            ManagerLimit = Summary.Subscription.ManagerLimit;
+            SearchLimit = Summary.Subscription.SearchLimit;
+            SocialLimit = Summary.Subscription.SocialLimit;
+            DocumentsLimit = Summary.Subscription.DocumentsLimit;
+            AnalystLimit = Summary.Subscription.AnalystLimit;
+
+            // Load unique agent names that have logs for filter dropdown
+            AgentFilters = Summary.HistoryLogs
+                .Select(x => x.AgentName)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToList();
+        }
+    }
+
+    private async Task ToggleSubscription(ChangeEventArgs e)
+    {
+        SubscriptionActive = (bool)(e.Value ?? false);
+        await SaveSubscriptionSettings();
+    }
+
+    private async Task ToggleKillSwitch(ChangeEventArgs e)
+    {
+        IsKillSwitchActive = (bool)(e.Value ?? false);
+        await SaveSubscriptionSettings();
+    }
+
+    private async Task SaveSubscriptionSettings()
+    {
+        var userId = AuthService.CurrentUser?.LocalId ?? "default_user";
+        
+        // Sanitize credit card inputs
+        var cardName = string.IsNullOrWhiteSpace(CardholderName) ? "Alex Mercer" : CardholderName;
+        var last4 = string.IsNullOrWhiteSpace(CardNumberLast4) ? "4242" : CardNumberLast4;
+        if (last4.Length > 4) last4 = last4.Substring(last4.Length - 4);
+        var expiry = string.IsNullOrWhiteSpace(CardExpiry) ? "12/28" : CardExpiry;
+
+        var currentSub = new BillingSubscription(
+            UserId: userId,
+            IsActive: SubscriptionActive,
+            MonthlyBudgetLimit: BudgetCap,
+            CardholderName: cardName,
+            CardNumberLast4: last4,
+            CardExpiry: expiry,
+            SubscribedAt: Summary?.Subscription?.SubscribedAt ?? DateTime.UtcNow,
+            IsKillSwitchActive: IsKillSwitchActive,
+            MaxTokensPerCall: MaxTokensPerCall,
+            CeoLimit: CeoLimit,
+            ManagerLimit: ManagerLimit,
+            SearchLimit: SearchLimit,
+            SocialLimit: SocialLimit,
+            DocumentsLimit: DocumentsLimit,
+            AnalystLimit: AnalystLimit
+        );
+
+        await BillingSvc.SaveSubscriptionAsync(userId, currentSub);
+        await LoadSummaryData();
+    }
+
+    private async Task SaveAllSettings()
+    {
+        IsSaving = true;
+        ShowSaveSuccess = false;
+        StateHasChanged();
+
+        try
+        {
+            await SaveSubscriptionSettings();
+            ShowSaveSuccess = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving settings: {ex.Message}");
+        }
+        finally
+        {
+            IsSaving = false;
+            StateHasChanged();
+        }
+
+        // Auto-hide the success message after 3 seconds
+        _ = Task.Delay(3000).ContinueWith(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                ShowSaveSuccess = false;
+                StateHasChanged();
+            });
+        });
+    }
+
+    public void Dispose()
+    {
+        LogStreamSubscription?.Dispose();
+    }
+}
