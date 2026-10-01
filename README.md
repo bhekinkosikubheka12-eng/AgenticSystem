@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![AgenticSystem Banner](./assets/agentic_system_banner.png)
+![AgenticSystem Banner](./assets/HumanicAgentsDeviceMockup.png)
 
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Blazor](https://img.shields.io/badge/Blazor-Interactive_Server-512BD4?style=for-the-badge&logo=blazor&logoColor=white)](https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor)
