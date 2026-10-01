@@ -27,6 +27,7 @@ Built on cutting-edge **.NET 10 Interactive Server Blazor** and **Microsoft Sema
 
 ---
 
+
 ## ⚡ Key Capabilities
 
 - 🧠 **Hierarchical Agent Orchestration**: Multi-tier executive agent decision loops where strategic goals cascade from the CEO agent to managers and specialist domain agents.
@@ -121,6 +122,8 @@ flowchart TD
 | **📢 Social & Creative Agent** | Synthesizes viral marketing copy, schedules multi-platform posts, and drives digital engagement. | Gemini multimodal, Video & Image Generation Services |
 | **🎯 Lead Specialist** | Ingests inbound inquiries from web forms and WhatsApp, qualifies leads, and triggers nurture flows. | WhatsApp Webhooks, Leads Center Orchestrator, MailKit |
 
+
+![AgenticSystem Banner](./assets/agentic_system_banner.png)
 ---
 
 ## 🚀 Getting Started
